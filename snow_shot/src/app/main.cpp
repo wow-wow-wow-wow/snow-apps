@@ -76,6 +76,10 @@ int runMcpApplicationLifecycleTests(int argc, char** argv);
 #include <Windows.h>
 #endif
 
+#ifdef Q_OS_LINUX
+#include "snow_shot/platform/linux/autostartregistration.h"
+#endif
+
 extern "C" void snow_diagnostics_install_panic_hook(void (*callback)(const unsigned char*, size_t));
 
 #ifdef SNOW_SHOT_CONTROLLER_LIFETIME_TESTS
@@ -114,7 +118,7 @@ startupDiagnosticsOptions(const QString& selectedDirectory, const QString& appli
     return options;
 }
 
-#ifndef Q_OS_MACOS
+#ifdef Q_OS_WIN
 QString updateInstallationRoot(const QString& executableDirectory) {
     return QFileInfo(executableDirectory).dir().absolutePath();
 }
@@ -432,8 +436,9 @@ int main(int argc, char* argv[]) {
         storage.shutdown();
         return 0;
     }
-#ifndef Q_OS_MACOS
-    // macOS updates use a downloaded DMG, not the standalone transaction helper.
+#ifdef Q_OS_WIN
+    // Windows standalone updates run through a transaction helper; macOS uses a
+    // downloaded DMG and Linux package managers own the update flow.
     if (!snow_shot::app::distribution::isStoreManaged()) {
         QString executablePath = QString::fromLocal8Bit(argv[0]);
 #ifdef Q_OS_WIN
@@ -515,9 +520,13 @@ int main(int argc, char* argv[]) {
 #ifdef Q_OS_MACOS
     diagnosticsOptions.handlerPath =
         QDir(selectedStorage.executableDirectory).filePath(QStringLiteral("crashpad_handler"));
-#else
+#elif defined(Q_OS_WIN)
     diagnosticsOptions.handlerPath =
         QDir(selectedStorage.executableDirectory).filePath(QStringLiteral("crashpad_handler.exe"));
+#else
+    // Linux diagnostics collect crashes through systemd coredumps; no
+    // crashpad handler binary ships alongside the executable.
+    diagnosticsOptions.handlerPath = QString();
 #endif
     diagnosticsOptions.version = QStringLiteral(SNOW_DIAGNOSTICS_VERSION);
     diagnosticsOptions.revision = QStringLiteral(SNOW_DIAGNOSTICS_REVISION);
@@ -720,6 +729,12 @@ int main(int argc, char* argv[]) {
             ? snow_shot::platform::macos::loginItemService().initialize(
                   startupSettings.autoStartAtBoot())
             : snow_shot::platform::macos::LoginItemResult{};
+#elif defined(Q_OS_LINUX)
+    const auto startupResult = snow_shot::platform::linux::reconcileStartupMode(
+        !startupSettings.autoStartAtBoot() ? snow_shot::platform::linux::StartupMode::Off
+        : startupSettings.launchAsAdministrator()
+            ? snow_shot::platform::linux::StartupMode::Elevated
+            : snow_shot::platform::linux::StartupMode::Standard);
 #else
     const auto startupResult = snow_shot::platform::windows::reconcileStartupMode(
         !startupSettings.autoStartAtBoot() ? snow_shot::platform::windows::StartupMode::Off
