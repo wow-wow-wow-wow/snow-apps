@@ -41,6 +41,12 @@
           "features": ["snow-macos-media"],
           "platform": "osx"
         },
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": ["snow-linux-media"],
+          "platform": "linux"
+        },
         { "name": "libpng", "features": ["apng"] },
         "tinyxml2",
         {

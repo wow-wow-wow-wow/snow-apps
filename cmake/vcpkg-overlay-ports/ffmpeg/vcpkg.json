@@ -843,6 +843,34 @@
           ]
         }
       ]
+    },
+    "snow-linux-media": {
+      "description": "Standalone Linux capture recording and export codecs with VA-API and software fallbacks",
+      "supports": "linux",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": [
+            "avcodec",
+            "avfilter",
+            "avformat",
+            "swresample",
+            "swscale",
+            "webp",
+            "x264",
+            "x265",
+            "zlib",
+            "vaapi"
+          ]
+        },
+        {
+          "name": "x265",
+          "features": [
+            "main10"
+          ]
+        }
+      ]
     }
   }
 }
