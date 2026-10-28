@@ -25,7 +25,9 @@ permissions:
 
 env:
   QT_VERSION: 6.12.0
-  QT_ROOT: ${{ github.workspace }}/.tools/qt/6.12.0/gcc_64
+  # Qt 6.12 names the Linux desktop architecture linux_gcc_64.
+  QT_ARCH: linux_gcc_64
+  QT_ROOT: ${{ github.workspace }}/.tools/qt/6.12.0/linux_gcc_64
   SNOW_VERSION_FROM_CMAKE: '1'
 
 jobs:
@@ -70,16 +72,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .tools/qt
-          key: linux-qt-${{ env.QT_VERSION }}-gcc_64-v1
+          key: linux-qt-${{ env.QT_VERSION }}-${{ env.QT_ARCH }}-v1
 
       - name: Install Qt
         run: |
           mkdir -p .tools/qt
-          aqt install-qt linux desktop "$QT_VERSION" gcc_64 --outputdir .tools/qt
-          # Ship the native Wayland platform plugin when Qt offers it as an add-on.
-          if aqt list-qt linux desktop --modules "$QT_VERSION" gcc_64 | grep -qx qtwayland; then
-            aqt install-qt linux desktop "$QT_VERSION" gcc_64 --modules qtwayland --outputdir .tools/qt
-          fi
+          aqt install-qt linux desktop "$QT_VERSION" "$QT_ARCH" --outputdir .tools/qt
+          # The Wayland client platform plugin ships inside the qtbase archive
+          # for Linux; only the compositor would be a separate add-on module.
           "$QT_ROOT/bin/qmake" --version
 
       - name: Cache Rust build artifacts
