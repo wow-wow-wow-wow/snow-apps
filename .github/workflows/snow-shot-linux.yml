@@ -75,7 +75,7 @@ jobs:
       - name: Install Qt
         run: |
           mkdir -p .tools/qt
-          aqt install-qt linux desktop "$QT_VERSION" gcc_64 --archives qtbase qtsvg qttools qttranslations --outputdir .tools/qt
+          aqt install-qt linux desktop "$QT_VERSION" gcc_64 --outputdir .tools/qt
           # Ship the native Wayland platform plugin when Qt offers it as an add-on.
           if aqt list-qt linux desktop --modules "$QT_VERSION" gcc_64 | grep -qx qtwayland; then
             aqt install-qt linux desktop "$QT_VERSION" gcc_64 --modules qtwayland --outputdir .tools/qt
