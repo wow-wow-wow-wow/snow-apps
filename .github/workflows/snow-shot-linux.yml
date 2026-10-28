@@ -25,9 +25,10 @@ permissions:
 
 env:
   QT_VERSION: 6.12.0
-  # Qt 6.12 names the Linux desktop architecture linux_gcc_64.
+  # Qt 6.12 names the Linux desktop architecture linux_gcc_64 for aqt, but the
+  # extracted kit directory keeps the historical gcc_64 name.
   QT_ARCH: linux_gcc_64
-  QT_ROOT: ${{ github.workspace }}/.tools/qt/6.12.0/linux_gcc_64
+  QT_ROOT: ${{ github.workspace }}/.tools/qt/6.12.0/gcc_64
   SNOW_VERSION_FROM_CMAKE: '1'
 
 jobs:
