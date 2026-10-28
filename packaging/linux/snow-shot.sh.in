@@ -1,0 +1,3 @@
+#!/bin/sh
+# System launcher for the Snow Shot package layout under /opt/snow-shot.
+exec /opt/snow-shot/bin/snow_shot "$@"
