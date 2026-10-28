@@ -1,0 +1,182 @@
+name: Snow Shot Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      configure_only:
+        description: 'Configure only (fast feedback for build system changes)'
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: snow-shot-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  QT_VERSION: 6.12.0
+  QT_ROOT: ${{ github.workspace }}/.tools/qt/6.12.0/gcc_64
+  SNOW_VERSION_FROM_CMAKE: '1'
+
+jobs:
+  linux-x64:
+    name: Build and package (Linux x64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Resolve Snow Shot version
+        run: |
+          version="$(sed -n 's/^set(SNOW_SHOT_VERSION "\(.*\)")$/\1/p' CMakeLists.txt | head -n 1)"
+          [[ -n "$version" ]] || { echo 'Unable to resolve SNOW_SHOT_VERSION from CMakeLists.txt'; exit 1; }
+          echo "SNOW_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build pkg-config g++ gcc libclang-dev clang \
+            desktop-file-utils librsvg2-bin patchelf file \
+            curl zip unzip tar xz-utils
+
+      - name: Install CMake and aqtinstall
+        run: |
+          python3 -m pip install --user --break-system-packages --quiet 'cmake>=4.2' aqtinstall
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+          components: clippy, rustfmt
+
+      - name: Cache Qt kit
+        uses: actions/cache@v4
+        with:
+          path: .tools/qt
+          key: linux-qt-${{ env.QT_VERSION }}-gcc_64-v1
+
+      - name: Install Qt
+        run: |
+          mkdir -p .tools/qt
+          aqt install-qt linux desktop "$QT_VERSION" gcc_64 --archives qtbase qtsvg qttools qttranslations --outputdir .tools/qt
+          # Ship the native Wayland platform plugin when Qt offers it as an add-on.
+          if aqt list-qt linux desktop --modules "$QT_VERSION" gcc_64 | grep -qx qtwayland; then
+            aqt install-qt linux desktop "$QT_VERSION" gcc_64 --modules qtwayland --outputdir .tools/qt
+          fi
+          "$QT_ROOT/bin/qmake" --version
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            snow-crates
+            snow_rust_ffi
+            snow_shot/rust/snow-shot-mcp
+
+      - name: Cache vcpkg installed tree
+        uses: actions/cache@v4
+        with:
+          path: .tools/vcpkg/installed/dynamic
+          key: linux-vcpkg-x64-snow-shot-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'cmake/vcpkg-overlay-ports/**', 'cmake/vcpkg-overlay-triplets/x64-linux-snow-shot.cmake') }}
+          restore-keys: |
+            linux-vcpkg-x64-snow-shot-
+
+      - name: Configure
+        run: |
+          export Qt6_DIR="$QT_ROOT/lib/cmake/Qt6"
+          if [[ "${{ inputs.configure_only || 'false' }}" == "true" ]]; then
+            scripts/bootstrap-linux.sh linux-gcc-release --skip-dependency-install
+            cmake --preset linux-gcc-release -D "Qt6_DIR=$Qt6_DIR"
+          else
+            scripts/bootstrap-linux.sh linux-gcc-release
+            scripts/build-linux.sh linux-gcc-release --skip-bootstrap --parallel "$(nproc)"
+          fi
+
+      - name: Smoke check
+        if: ${{ inputs.configure_only != true }}
+        run: |
+          binary="$(find build/linux-gcc-release -maxdepth 3 -type f -name snow_shot | head -n 1)"
+          [[ -n "$binary" ]] || { echo 'snow_shot binary not found'; exit 1; }
+          QT_QPA_PLATFORM=offscreen "$binary" --distribution-probe
+
+      - name: Stage AppDir
+        if: ${{ inputs.configure_only != true }}
+        run: |
+          scripts/stage-linux-appdir.sh \
+            --build-dir build/linux-gcc-release \
+            --appdir build/linux-appdir \
+            --version "$SNOW_VERSION"
+
+      - name: Package (Debian)
+        if: ${{ inputs.configure_only != true }}
+        run: |
+          scripts/package-linux-deb.sh \
+            --appdir build/linux-appdir \
+            --version "$SNOW_VERSION" \
+            --output-dir build/linux-packages \
+            --payload-tar build/linux-packages/snow-shot_${SNOW_VERSION}_amd64-payload.tar.gz
+
+      - name: Package (Arch Linux)
+        if: ${{ inputs.configure_only != true }}
+        run: |
+          mkdir -p build/linux-arch
+          sed "s/@PKGVER@/$SNOW_VERSION/" packaging/linux/PKGBUILD.in > build/linux-arch/PKGBUILD
+          mkdir -p build/linux-arch/payload
+          tar -xzf "build/linux-packages/snow-shot_${SNOW_VERSION}_amd64-payload.tar.gz" -C build/linux-arch/payload
+          docker run --rm -v "$PWD/build/linux-arch:/work" archlinux:base-devel bash -ec '
+            useradd -m builder
+            chown -R builder:builder /work
+            su builder -c "cd /work && makepkg -f --noconfirm --nodeps"
+          '
+          find build/linux-arch -maxdepth 1 -name '*.pkg.tar.zst' -exec mv {} build/linux-packages/ \;
+
+      - name: Package (AppImage)
+        if: ${{ inputs.configure_only != true }}
+        run: |
+          curl -fL --retry 3 -o appimagetool-x86_64.AppImage \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          ./appimagetool-x86_64.AppImage --appimage-extract-and-run \
+            build/linux-appdir "build/linux-packages/snow-shot_${SNOW_VERSION}-x86_64.AppImage"
+
+      - name: Checksums
+        if: ${{ inputs.configure_only != true }}
+        run: |
+          cd build/linux-packages
+          find . -maxdepth 1 -type f ! -name SHA256SUMS -exec sha256sum {} \; > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Upload packages
+        if: ${{ inputs.configure_only != true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: snow-shot-linux-x64-packages
+          path: build/linux-packages/*
+          if-no-files-found: error
+
+      - name: Publish release
+        if: ${{ startsWith(github.ref, 'refs/tags/') && inputs.configure_only != true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Snow Shot Linux $SNOW_VERSION" \
+            --notes "Linux x64 packages: Debian/Ubuntu (.deb), Arch Linux (.pkg.tar.zst), universal AppImage." \
+            build/linux-packages/*
