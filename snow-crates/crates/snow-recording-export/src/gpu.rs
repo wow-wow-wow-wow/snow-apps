@@ -218,6 +218,9 @@ impl HardwareFrames {
     }
 
     pub(crate) fn allocate(&self) -> Result<Option<GpuEncoderFrame>> {
+        // Atomic<T>::fetch_update was renamed try_update in Rust 1.99; keep the
+        // old name while the toolchain floor stays below that.
+        #[allow(deprecated)]
         if self
             .outstanding
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |count| {

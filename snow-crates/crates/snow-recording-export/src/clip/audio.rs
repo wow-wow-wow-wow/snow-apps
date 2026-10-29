@@ -143,7 +143,7 @@ impl AudioReader {
                 if route != "mixed" && route != &pcm.id {
                     continue;
                 }
-                for (sample, bytes) in output.iter_mut().zip(self.scratch.chunks_exact(2)) {
+                for (sample, bytes) in output.iter_mut().zip(self.scratch.as_chunks::<2>().0.iter()) {
                     *sample = sample.saturating_add(i16::from_le_bytes([bytes[0], bytes[1]]));
                 }
             }
@@ -224,7 +224,7 @@ impl EncodedSource {
                     self.samples.clear();
                     self.samples.extend(
                         converted.data(0)[..converted.samples() * 4]
-                            .chunks_exact(2)
+                            .as_chunks::<2>().0.iter()
                             .map(|bytes| i16::from_le_bytes([bytes[0], bytes[1]])),
                     );
                     return Ok(());

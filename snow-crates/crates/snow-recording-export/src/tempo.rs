@@ -70,7 +70,7 @@ impl TempoTrack {
         self.input.set_rate(48_000);
         self.input
             .set_pts(Some(i64::try_from(position).map_err(filter_error)?));
-        for (bytes, sample) in self.input.data_mut(0).chunks_exact_mut(2).zip(samples) {
+        for (bytes, sample) in self.input.data_mut(0).as_chunks_mut::<2>().0.iter_mut().zip(samples) {
             bytes.copy_from_slice(&sample.to_ne_bytes());
         }
         let status = unsafe {
@@ -111,7 +111,7 @@ impl TempoTrack {
                 let count = self.frame.samples() * 2;
                 for (sample, bytes) in output[..count]
                     .iter_mut()
-                    .zip(self.frame.data(0)[..count * 2].chunks_exact(2))
+                    .zip(self.frame.data(0)[..count * 2].as_chunks::<2>().0.iter())
                 {
                     *sample = i16::from_ne_bytes([bytes[0], bytes[1]]);
                 }
@@ -393,7 +393,7 @@ mod tests {
             while reader.position() < total {
                 let tracks = reader.read(960, &CancellationToken::default()).unwrap();
                 assert!(tracks[0].len() <= 1920);
-                result.extend(tracks[0].chunks_exact(2).map(|samples| samples[0]));
+                result.extend(tracks[0].as_chunks::<2>().0.iter().map(|samples| samples[0]));
             }
             assert_eq!(result.len() as u64, total);
             let middle = &result[result.len() / 10..result.len() * 9 / 10];

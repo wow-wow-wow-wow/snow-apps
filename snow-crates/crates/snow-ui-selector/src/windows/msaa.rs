@@ -80,6 +80,9 @@ impl MsaaWorkerAdmission {
     }
 
     fn try_acquire(self: &Arc<Self>) -> Option<MsaaWorkerPermit> {
+        // Atomic<T>::fetch_update was renamed try_update in Rust 1.99; keep the
+        // old name while the toolchain floor stays below that.
+        #[allow(deprecated)]
         self.live_workers
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |live| {
                 (live < MSAA_MAX_OUTSTANDING_WORKERS).then_some(live + 1)

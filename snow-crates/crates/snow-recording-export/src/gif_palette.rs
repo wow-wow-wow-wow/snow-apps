@@ -171,7 +171,7 @@ impl GifPalette {
         let mut darkest = (luma([255; 3]), [255; 3]);
         let mut lightest = (0, [0; 3]);
         for (y, row) in rgb.data(0).chunks(rgb.stride(0)).take(height).enumerate() {
-            for (x, pixel) in row[..width * 3].chunks_exact(3).enumerate() {
+            for (x, pixel) in row[..width * 3].as_chunks::<3>().0.iter().enumerate() {
                 let at = (y * width + x) * 3;
                 if !previous.is_empty() && pixel == &previous[at..at + 3] {
                     continue;
@@ -235,7 +235,7 @@ impl GifPalette {
         for y in 0..height {
             let row = &rgb.data(0)[y * rgb.stride(0)..][..width * 3];
             let dst = &mut output.data_mut(0)[y * stride..][..width];
-            for (x, pixel) in row.chunks_exact(3).enumerate() {
+            for (x, pixel) in row.as_chunks::<3>().0.iter().enumerate() {
                 let at = (y * width + x) * 3;
                 if !previous.is_empty() && pixel == &previous[at..at + 3] {
                     dst[x] = 255;

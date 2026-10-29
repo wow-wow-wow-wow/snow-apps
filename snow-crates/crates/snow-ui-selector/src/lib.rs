@@ -69,6 +69,9 @@ pub struct ElementRect {
     rect: PixelRect,
 }
 impl ElementRect {
+    // Constructed only by the macOS and Windows backends; the Linux backend
+    // arrives with P6-T4.
+    #[cfg_attr(not(any(target_os = "windows", target_os = "macos")), allow(dead_code))]
     pub(crate) fn new(rect: impl Into<PixelRect>) -> Self {
         Self { rect: rect.into() }
     }

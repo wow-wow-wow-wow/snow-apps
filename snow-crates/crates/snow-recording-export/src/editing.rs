@@ -3680,20 +3680,20 @@ fn blend_cursor_row_yuv420p(
     let y_row = &mut frame.y[y_row_start..y_row_start + pixel_count];
     match kind {
         CompiledCursorRunKind::AlphaCopy => {
-            for (dst, src) in y_row.iter_mut().zip(src_yuva.chunks_exact(4)) {
+            for (dst, src) in y_row.iter_mut().zip(src_yuva.as_chunks::<4>().0.iter()) {
                 *dst = src[0];
             }
             let chroma_y = dst_y / 2;
             let u_row_start = chroma_y.saturating_mul(frame.u_stride);
             let v_row_start = chroma_y.saturating_mul(frame.v_stride);
-            for (pixel_idx, src) in src_yuva.chunks_exact(4).enumerate() {
+            for (pixel_idx, src) in src_yuva.as_chunks::<4>().0.iter().enumerate() {
                 let chroma_x = (dst_x + pixel_idx) / 2;
                 frame.u[u_row_start + chroma_x] = src[1];
                 frame.v[v_row_start + chroma_x] = src[2];
             }
         }
         CompiledCursorRunKind::Blend => {
-            for (dst, src) in y_row.iter_mut().zip(src_yuva.chunks_exact(4)) {
+            for (dst, src) in y_row.iter_mut().zip(src_yuva.as_chunks::<4>().0.iter()) {
                 if src[3] != 0 {
                     blend_yuv_sample(dst, src[0], src[3]);
                 }
@@ -3701,7 +3701,7 @@ fn blend_cursor_row_yuv420p(
             let chroma_y = dst_y / 2;
             let u_row_start = chroma_y.saturating_mul(frame.u_stride);
             let v_row_start = chroma_y.saturating_mul(frame.v_stride);
-            for (pixel_idx, src) in src_yuva.chunks_exact(4).enumerate() {
+            for (pixel_idx, src) in src_yuva.as_chunks::<4>().0.iter().enumerate() {
                 if src[3] == 0 {
                     continue;
                 }
@@ -3731,12 +3731,12 @@ fn blend_cursor_row_nv12(
     let y_row = &mut frame.y[y_row_start..y_row_start + pixel_count];
     match kind {
         CompiledCursorRunKind::AlphaCopy => {
-            for (dst, src) in y_row.iter_mut().zip(src_yuva.chunks_exact(4)) {
+            for (dst, src) in y_row.iter_mut().zip(src_yuva.as_chunks::<4>().0.iter()) {
                 *dst = src[0];
             }
             let chroma_y = dst_y / 2;
             let uv_row_start = chroma_y.saturating_mul(frame.uv_stride);
-            for (pixel_idx, src) in src_yuva.chunks_exact(4).enumerate() {
+            for (pixel_idx, src) in src_yuva.as_chunks::<4>().0.iter().enumerate() {
                 let chroma_x = (dst_x + pixel_idx) / 2;
                 let uv_idx = uv_row_start + chroma_x.saturating_mul(2);
                 frame.uv[uv_idx] = src[1];
@@ -3744,14 +3744,14 @@ fn blend_cursor_row_nv12(
             }
         }
         CompiledCursorRunKind::Blend => {
-            for (dst, src) in y_row.iter_mut().zip(src_yuva.chunks_exact(4)) {
+            for (dst, src) in y_row.iter_mut().zip(src_yuva.as_chunks::<4>().0.iter()) {
                 if src[3] != 0 {
                     blend_yuv_sample(dst, src[0], src[3]);
                 }
             }
             let chroma_y = dst_y / 2;
             let uv_row_start = chroma_y.saturating_mul(frame.uv_stride);
-            for (pixel_idx, src) in src_yuva.chunks_exact(4).enumerate() {
+            for (pixel_idx, src) in src_yuva.as_chunks::<4>().0.iter().enumerate() {
                 if src[3] == 0 {
                     continue;
                 }
@@ -3784,7 +3784,7 @@ fn rgb_to_yuv420p_pixel(r: u8, g: u8, b: u8) -> (u8, u8, u8) {
 
 fn rgba_to_yuva(rgba: &[u8]) -> Box<[u8]> {
     let mut yuva = Vec::with_capacity(rgba.len());
-    for pixel in rgba.chunks_exact(4) {
+    for pixel in rgba.as_chunks::<4>().0.iter() {
         let (y, u, v) = rgb_to_yuv420p_pixel(pixel[0], pixel[1], pixel[2]);
         yuva.extend_from_slice(&[y, u, v, pixel[3]]);
     }
@@ -6379,7 +6379,7 @@ mod tests {
             let mut expected = vec![0; (width * height * 4) as usize];
             for y in 0..height as usize {
                 let row = &mut frame.data_mut(0)[y * stride..y * stride + width as usize * 4];
-                for (x, pixel) in row.chunks_exact_mut(4).enumerate() {
+                for (x, pixel) in row.as_chunks_mut::<4>().0.iter_mut().enumerate() {
                     pixel.copy_from_slice(&[
                         (x * 37) as u8,
                         (x * 71 + y) as u8,
@@ -6967,7 +6967,7 @@ mod tests {
             None,
             &None,
             |index, rgba| {
-                for pixel in rgba.chunks_exact_mut(4) {
+                for pixel in rgba.as_chunks_mut::<4>().0.iter_mut() {
                     pixel.copy_from_slice(&colors[index]);
                 }
                 Ok(())
@@ -7127,7 +7127,7 @@ mod tests {
                 None,
                 &None,
                 |index, rgba| {
-                    for (pixel_index, pixel) in rgba.chunks_exact_mut(4).enumerate() {
+                    for (pixel_index, pixel) in rgba.as_chunks_mut::<4>().0.iter_mut().enumerate() {
                         pixel[0] = if index == 0 { 0x20 } else { 0xE0 };
                         pixel[1] = (pixel_index % 16) as u8 * 16;
                         pixel[2] = (pixel_index / 16) as u8 * 16;
@@ -7200,7 +7200,7 @@ mod tests {
             None,
             &None,
             |index, rgba| {
-                for pixel in rgba.chunks_exact_mut(4) {
+                for pixel in rgba.as_chunks_mut::<4>().0.iter_mut() {
                     pixel[0] = if index == 0 { 0x20 } else { 0xE0 };
                     pixel[1] = 0x80;
                     pixel[2] = 0x80;
@@ -7794,7 +7794,7 @@ mod tests {
             None,
             &None,
             |_, rgba| {
-                rgba.chunks_exact_mut(4)
+                rgba.as_chunks_mut::<4>().0.iter_mut()
                     .for_each(|pixel| pixel.copy_from_slice(&[20, 80, 120, 255]));
                 Ok(())
             },

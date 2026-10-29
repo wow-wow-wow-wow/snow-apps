@@ -2786,7 +2786,7 @@ impl StreamingAudioState {
             ));
         }
         for (destination, sample) in destination[..required_bytes]
-            .chunks_exact_mut(2)
+            .as_chunks_mut::<2>().0.iter_mut()
             .zip(samples.iter())
         {
             destination.copy_from_slice(&sample.to_ne_bytes());
@@ -3328,7 +3328,7 @@ mod tests {
             let mut raster = RasterBuffer::new();
             for pts in 0..8 {
                 raster.resize(128 * 96 * 4, 0);
-                for (index, pixel) in raster.chunks_exact_mut(4).enumerate() {
+                for (index, pixel) in raster.as_chunks_mut::<4>().0.iter_mut().enumerate() {
                     pixel.copy_from_slice(&[(index % 251) as u8, (index / 128) as u8, 210, 255]);
                 }
                 // Exercise repeated content, changing content, and encoder-held
@@ -3513,7 +3513,7 @@ mod tests {
     fn write_test_frames(encoder: &mut StreamingEncoder) {
         for index in 0..3u8 {
             let mut rgba = vec![0u8; 16 * 16 * 4];
-            for pixel in rgba.chunks_exact_mut(4) {
+            for pixel in rgba.as_chunks_mut::<4>().0.iter_mut() {
                 pixel.copy_from_slice(&[index.saturating_mul(80), 40, 180, 255]);
             }
             encoder
@@ -4300,7 +4300,7 @@ mod tests {
                 let duration = 1 + index % 4 + if index == 0 { initial_hold } else { 0 };
                 expected.push((pts, duration));
                 let mut pixels = vec![80; 64 * 64 * 4];
-                for pixel in pixels.chunks_exact_mut(4).skip(index % 64).take(64) {
+                for pixel in pixels.as_chunks_mut::<4>().0.iter_mut().skip(index % 64).take(64) {
                     pixel.copy_from_slice(&[180, 180, 180, 255]);
                 }
                 encoder.push_rgba_frame_at_pts(pts as u64, &pixels).unwrap();
