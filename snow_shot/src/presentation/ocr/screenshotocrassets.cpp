@@ -709,7 +709,7 @@ bool extractRuntime(const QString& archive, const QString& staging,
             break;
         }
         const QString name = QDir::fromNativeSeparators(QString::fromUtf8(info->filename));
-        const quint32 unixMode = static_cast<quint32>(info->external_fa >> 16);
+        const quint32 unixMode = info->external_fa >> 16;
         const bool specialUnixType =
             (unixMode & 0170000U) != 0U && (unixMode & 0170000U) != 0100000U;
         const bool reparseLike = (info->external_fa & 0x0400U) != 0U;

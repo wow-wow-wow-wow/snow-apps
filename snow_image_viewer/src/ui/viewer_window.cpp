@@ -1133,7 +1133,11 @@ void ViewerWindow::requestCurrentPixels(PixelReadbackPurpose purpose) {
     }
     pixelReadbackInFlight_ = true;
     pixelReadbackPurpose_ = purpose;
-    pixelReadbackRequest_ = (quint64{1} << 63U) | (++pixelReadbackRequest_ & ~(quint64{1} << 63U));
+    // Split from a single read-modify-write expression, which had an
+    // unsequenced modification of pixelReadbackRequest_ (-Wsequence-point).
+    ++pixelReadbackRequest_;
+    pixelReadbackRequest_ &= ~(quint64{1} << 63U);
+    pixelReadbackRequest_ |= (quint64{1} << 63U);
     updateImageControls();
     rhiWindow_->requestMainImageReadback(pixelReadbackRequest_);
 }

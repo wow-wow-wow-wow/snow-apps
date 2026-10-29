@@ -428,8 +428,8 @@ void documentChangesShareTheTextPublicationTransaction() {
 }
 
 QVector<AdTagGroup::Option> tagOptions() {
-  return {{QStringLiteral("alpha"), QStringLiteral("Alpha")},
-          {QStringLiteral("beta"), QStringLiteral("Beta")}};
+  return {{QStringLiteral("alpha"), QStringLiteral("Alpha"), {}, {}},
+          {QStringLiteral("beta"), QStringLiteral("Beta"), {}, {}}};
 }
 
 template <typename Action>
@@ -454,7 +454,7 @@ void tagSelectionChainsRespectLifetime() {
   tagCanRetireFromSelection(
       [](AdTagGroup& group) { group.setSelectionMode(AdTagGroup::SelectionMode::Single); });
   tagCanRetireFromSelection([](AdTagGroup& group) {
-    group.setOptions({{QStringLiteral("alpha"), QStringLiteral("Alpha")}});
+    group.setOptions({{QStringLiteral("alpha"), QStringLiteral("Alpha"), {}, {}}});
   });
   tagCanRetireFromSelection([](AdTagGroup& group) {
     auto* tag = group.findChildren<AdTag*>().constFirst();

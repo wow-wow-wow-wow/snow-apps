@@ -582,34 +582,42 @@ class AdModalService final {
   using ActionHandler = std::function<void(AdModal*)>;
 
   struct Request {
-    std::optional<AdModal::Preset> preset;
-    std::optional<AdModal::Mode> mode;
-    std::optional<QString> title;
-    std::optional<QString> text;
-    std::optional<QString> acceptText;
-    std::optional<QString> rejectText;
-    std::optional<AdModal::StandardButtons> standardButtons;
-    std::optional<bool> centered;
-    std::optional<bool> closeButtonVisible;
-    std::optional<bool> maskVisible;
-    std::optional<bool> closeOnMaskClick;
-    std::optional<bool> closeOnEscape;
-    std::optional<bool> footerVisible;
-    std::optional<bool> acceptButtonBusy;
-    std::optional<bool> contentLoading;
-    std::optional<int> preferredWidth;
-    std::optional<int> topOffset;
-    std::optional<AdButton::AccentRole> acceptAccentRole;
-    std::optional<AdButton::ButtonStyle> acceptButtonStyle;
-    ActionHandler onAccept;
-    ActionHandler onReject;
+    // The NSDMIs keep partial designated initializers warning-free under
+    // -Wmissing-field-initializers.
+    std::optional<AdModal::Preset> preset = std::nullopt;
+    std::optional<AdModal::Mode> mode = std::nullopt;
+    std::optional<QString> title = std::nullopt;
+    std::optional<QString> text = std::nullopt;
+    std::optional<QString> acceptText = std::nullopt;
+    std::optional<QString> rejectText = std::nullopt;
+    std::optional<AdModal::StandardButtons> standardButtons = std::nullopt;
+    std::optional<bool> centered = std::nullopt;
+    std::optional<bool> closeButtonVisible = std::nullopt;
+    std::optional<bool> maskVisible = std::nullopt;
+    std::optional<bool> closeOnMaskClick = std::nullopt;
+    std::optional<bool> closeOnEscape = std::nullopt;
+    std::optional<bool> footerVisible = std::nullopt;
+    std::optional<bool> acceptButtonBusy = std::nullopt;
+    std::optional<bool> contentLoading = std::nullopt;
+    std::optional<int> preferredWidth = std::nullopt;
+    std::optional<int> topOffset = std::nullopt;
+    std::optional<AdButton::AccentRole> acceptAccentRole = std::nullopt;
+    std::optional<AdButton::ButtonStyle> acceptButtonStyle = std::nullopt;
+    ActionHandler onAccept = nullptr;
+    ActionHandler onReject = nullptr;
   };
 
-  static AdModal* showInfo(const Request& request = {}, QWidget* ownerWindow = nullptr);
-  static AdModal* showSuccess(const Request& request = {}, QWidget* ownerWindow = nullptr);
-  static AdModal* showError(const Request& request = {}, QWidget* ownerWindow = nullptr);
-  static AdModal* showWarning(const Request& request = {}, QWidget* ownerWindow = nullptr);
-  static AdModal* showConfirm(const Request& request = {}, QWidget* ownerWindow = nullptr);
+  // `= {}` cannot serve as the default argument below: GCC 16 requires any
+  // default member initializer of Request only after the class is complete,
+  // and the default argument of a member is parsed inside the class.
+  // defaultRequest() supplies the default instead.
+  static const Request& defaultRequest();
+
+  static AdModal* showInfo(const Request& request = defaultRequest(), QWidget* ownerWindow = nullptr);
+  static AdModal* showSuccess(const Request& request = defaultRequest(), QWidget* ownerWindow = nullptr);
+  static AdModal* showError(const Request& request = defaultRequest(), QWidget* ownerWindow = nullptr);
+  static AdModal* showWarning(const Request& request = defaultRequest(), QWidget* ownerWindow = nullptr);
+  static AdModal* showConfirm(const Request& request = defaultRequest(), QWidget* ownerWindow = nullptr);
   static void closeAll();
 
  private:

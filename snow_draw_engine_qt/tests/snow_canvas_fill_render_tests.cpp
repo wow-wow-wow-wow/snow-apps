@@ -354,8 +354,8 @@ void borderStyleEditsPreserveColorAndUndo() {
         const auto id =
             result.value(QStringLiteral("created_element_ids")).toArray().first().toObject();
         SnowCanvasRuntimeEditor editor(runtime);
-        require(editor.select(id.value(QStringLiteral("index")).toInt(),
-                              id.value(QStringLiteral("generation")).toInt()),
+        require(editor.select(static_cast<quint32>(id.value(QStringLiteral("index")).toInt()),
+                              static_cast<quint32>(id.value(QStringLiteral("generation")).toInt())),
                 "select the fill history fixture");
         const auto filled = runtime.renderToImage(QRectF(0, 0, 192, 192), QSize(192, 192), {});
         auto style = editor.canvasStyleToolbarState().shapeStyle;

@@ -512,9 +512,14 @@ void transparentSpotlightPreservesWidgetAndExports() {
                 const QRectF bounds(0, 0, 100, 100);
                 QImage image(100, 100, QImage::Format_ARGB32_Premultiplied);
                 image.fill(Qt::white);
-                const QList<CanvasExportSource> sources =
-                    backgroundMode == 0 ? QList<CanvasExportSource>{}
-                                        : QList<CanvasExportSource>{{image, bounds}};
+                // Split from a ternary: GCC 16's -Wdangling-pointer flags the
+                // temporary QList bound through the conditional expression.
+                const QList<CanvasExportSource> sources = [&] {
+                    if (backgroundMode == 0) {
+                        return QList<CanvasExportSource>{};
+                    }
+                    return QList<CanvasExportSource>{CanvasExportSource{image, bounds}};
+                }();
                 const auto baselineExport = runtime.renderToImage(bounds, image.size(), sources);
                 require(
                     !runtime

@@ -59,6 +59,11 @@ QThreadPool& workerPool() {
     return pool;
 }
 
+} // namespace
+
+// Outside the anonymous namespace: Coordinator::Impl holds a shared_ptr to
+// Mailbox, and Mailbox::completed holds Completed; members may not use
+// internal-linkage types (GCC -Wsubobject-linkage).
 struct Completed {
     quint64 id = 0;
     QByteArray key;
@@ -69,7 +74,6 @@ struct Mailbox {
     std::mutex mutex;
     std::vector<Completed> completed;
 };
-} // namespace
 
 QByteArray geometryKey(const SnowCanvasSceneItem& item) {
     QByteArray bytes;

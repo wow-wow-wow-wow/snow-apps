@@ -91,11 +91,13 @@ void writeJson(const QString& path, const QJsonObject& value) {
     file.write(QJsonDocument(value).toJson(QJsonDocument::Compact));
 }
 
+#ifdef Q_OS_WIN
 QJsonObject readJson(const QString& path) {
     QFile file(path);
     return file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()).object()
                                           : QJsonObject{};
 }
+#endif
 
 int incrementCounter(const QString& path) {
     QDir().mkpath(QFileInfo(path).absolutePath());
@@ -120,9 +122,11 @@ void waitForRelease(const QString& cache, const QString& operation) {
     require(QFileInfo::exists(release), "parent releases the blocked sidecar operation");
 }
 
+#ifdef Q_OS_WIN
 void releaseSidecar(const QString& cache, const QString& operation) {
     touch(QDir(cache).filePath(operation + QStringLiteral("-release")));
 }
+#endif
 
 int fakeSidecar(int argc, char** argv) {
     const QString scenario = QUrl(argument(argc, argv, "--github-api-url")).path().mid(1);
@@ -317,6 +321,7 @@ int fakeSidecar(int argc, char** argv) {
     return 0;
 }
 
+#ifdef Q_OS_WIN
 bool waitUntil(const std::function<bool()>& predicate, int timeout = 5000) {
     QElapsedTimer timer;
     timer.start();
@@ -351,6 +356,7 @@ void expireScheduledTimer(UpdateService& service, std::chrono::milliseconds inte
     QTimerEvent expiration(timer->timerId());
     QCoreApplication::sendEvent(timer, &expiration);
 }
+#endif
 } // namespace
 
 int main(int argc, char** argv) {

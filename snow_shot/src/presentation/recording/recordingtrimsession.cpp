@@ -146,11 +146,13 @@ void RecordingTrimSession::seek(int frame, bool play) {
     if (!ready() || m_detached || m_previewFailed)
         return;
     const auto revision =
-        snow_recording_clip_seek(m_clip, static_cast<quint64>(frame), m_end, play ? 1 : 0);
+        snow_recording_clip_seek(m_clip, static_cast<uint64_t>(frame),
+                                 static_cast<uint64_t>(m_end), play ? 1 : 0);
     if (!revision)
         return;
-    m_revision = revision;
-    m_position = snow_recording_clip_boundary(m_clip, static_cast<quint64>(frame));
+    m_revision = static_cast<quint64>(revision);
+    m_position =
+        static_cast<quint64>(snow_recording_clip_boundary(m_clip, static_cast<uint64_t>(frame)));
     m_playing = play;
     m_panel->setPlaying(m_playing);
     m_timer.setInterval(16);
@@ -187,7 +189,7 @@ void RecordingTrimSession::setSpeed(quint32 percent) {
         return;
     }
     m_speedPercent = percent;
-    m_revision = revision;
+    m_revision = static_cast<quint64>(revision);
     m_timer.setInterval(16);
 }
 
@@ -216,7 +218,8 @@ void RecordingTrimSession::poll() {
         }
         m_end = m_info.frame_count;
         m_panel->setTimeline(static_cast<int>(m_end), m_info.duration_us, [this](int frame) {
-            return snow_recording_clip_boundary(m_clip, static_cast<quint64>(frame));
+            return static_cast<quint64>(
+                snow_recording_clip_boundary(m_clip, static_cast<uint64_t>(frame)));
         });
         m_phase = Phase::Trimming;
         report(QStringLiteral("recording.trim_ready"));

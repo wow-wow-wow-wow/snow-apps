@@ -18183,10 +18183,14 @@ void styledDrawTemplatesPersistNormalizeAndRemainInsertable() {
     };
     for (int version = 1; version <= currentTemplateVersion; ++version) {
         const auto payload = withVersion(version);
-        require(
-            settings.setTemplates({{QStringLiteral("  Compatible  "), payload}}) &&
-                settings.templates() ==
-                    QVector<storage::DrawTemplate>{{QStringLiteral("Compatible"), payload}},
+        // Named locals: GCC 16's -Wdangling-pointer flags braced temporaries
+        // bound directly to const-ref parameters.
+        const QVector<storage::DrawTemplate> compatibleInput = {
+            {QStringLiteral("  Compatible  "), payload}};
+        const QVector<storage::DrawTemplate> compatibleStored = {
+            {QStringLiteral("Compatible"), payload}};
+        require(settings.setTemplates(compatibleInput) &&
+                    settings.templates() == compatibleStored,
             "storage should accept every supported template version through its shared validator");
     }
     require(settings.setTemplates(templates),
@@ -18195,7 +18199,9 @@ void styledDrawTemplatesPersistNormalizeAndRemainInsertable() {
          {QJsonValue(), QJsonValue(-1), QJsonValue(0), QJsonValue(currentTemplateVersion + 1),
           QJsonValue(1.5), QJsonValue(QStringLiteral("6"))}) {
         const auto invalid = withVersion(version);
-        require(!settings.setTemplates({templates.first(), {QStringLiteral("Invalid"), invalid}}) &&
+        const QVector<storage::DrawTemplate> invalidVersions = {
+            templates.first(), {QStringLiteral("Invalid"), invalid}};
+        require(!settings.setTemplates(invalidVersions) &&
                     settings.templates() == templates,
                 "unsupported template versions should reject the whole settings edit atomically");
         const QJsonArray entries{

@@ -41,11 +41,11 @@
 #include "snow_shot/presentation/styles/themecolorscheme.h"
 #include "snow_shot/presentation/screenrecordingfolder.h"
 
-#if defined(Q_OS_WIN) || defined(_WIN32) || defined(Q_OS_MACOS)
+// The exclusion API is declared for every platform; Linux degrades to
+// unsupported answers in its own translation unit.
 #include "snow_shot/platform/windowcaptureexclusion.h"
 #if defined(Q_OS_WIN) || defined(_WIN32)
 #include "snow_shot/platform/windows/windowchrome.h"
-#endif
 #endif
 
 #include "snow_capture.h"

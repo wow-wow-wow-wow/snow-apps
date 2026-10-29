@@ -949,6 +949,11 @@ bool isFocusableWidget(QWidget* widget) {
 
 }  // namespace
 
+const AdModalService::Request& AdModalService::defaultRequest() {
+  static const Request kDefault;
+  return kDefault;
+}
+
 AdModal* AdModalService::showStaticRequest(const AdModalService::Request& request,
                                            AdModal::Preset defaultPreset, QWidget* ownerWindow) {
   QWidget* resolvedOwnerWindow = ownerWindow ? ownerWindow : QApplication::activeWindow();

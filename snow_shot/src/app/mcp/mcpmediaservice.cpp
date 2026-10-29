@@ -657,11 +657,11 @@ void McpMediaService::request(const ScreenshotMcpRequest& r,
         for (qsizetype index = offset; index < list.size() && page.size() < limit; ++index)
             page.append(list[index]);
         reply({{QStringLiteral("windows"), page},
-               {QStringLiteral("total"), static_cast<qint64>(list.size())},
+               {QStringLiteral("total"), list.size()},
                {QStringLiteral("revision"), static_cast<qint64>(revision)},
                {QStringLiteral("next_offset"),
                 offset + page.size() < list.size()
-                    ? QJsonValue(static_cast<qint64>(offset + page.size()))
+                    ? QJsonValue(offset + page.size())
                     : QJsonValue{}}},
               {});
         return;

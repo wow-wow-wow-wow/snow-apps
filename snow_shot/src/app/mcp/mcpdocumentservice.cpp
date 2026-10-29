@@ -194,9 +194,9 @@ qint64 sourceAuxiliaryBytes(const McpDocumentService::Source& source) {
                     source.recognitionResults.latexModelSelection.size() +
                     source.recognitionResults.tableEffectiveModel.size() +
                     source.recognitionResults.latexEffectiveModel.size());
-    bytes += static_cast<qint64>(source.recognitionResults.tableEntries.capacity()) *
+    bytes += source.recognitionResults.tableEntries.capacity() *
                  static_cast<qint64>(sizeof(ScreenshotTableRecognitionEntry)) +
-             static_cast<qint64>(source.recognitionResults.latexEntries.capacity()) *
+             source.recognitionResults.latexEntries.capacity() *
                  static_cast<qint64>(sizeof(ScreenshotLatexRecognitionEntry));
     for (const auto& entry : source.recognitionResults.tableEntries) {
         bytes +=

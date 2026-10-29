@@ -239,7 +239,7 @@ QByteArray serializeRecognitionResults(const ScreenshotRecognitionResults& sourc
     if (results.text.has_value() && results.text->presentation != nullptr) {
         // Keep the count 64-bit to match existing payloads written with Qt 6's qsizetype.
         stream << results.text->error << results.text->presentation->selection
-               << qint64(results.text->presentation->lines.size());
+               << results.text->presentation->lines.size();
         for (const ScreenshotOcrLine& line : results.text->presentation->lines) {
             stream << line.text << line.confidence << line.quad
                    << quint8(line.direction == ScreenshotOcrTextDirection::Vertical ? 1 : 0);
@@ -267,7 +267,7 @@ QByteArray serializeRecognitionResults(const ScreenshotRecognitionResults& sourc
         results.text->presentation != nullptr) {
         // Merged translations own their geometry and paragraph rendering metadata.
         stream << kTextTranslationPayloadMarker << kTextTranslationPayloadVersion
-               << results.translatedText->selection << qint64(results.translatedText->lines.size());
+               << results.translatedText->selection << results.translatedText->lines.size();
         for (const auto& line : results.translatedText->lines) {
             stream << line.text << line.confidence << line.quad
                    << quint8(line.direction == ScreenshotOcrTextDirection::Vertical ? 1 : 0)

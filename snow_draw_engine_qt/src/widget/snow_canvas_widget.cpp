@@ -77,6 +77,14 @@
 #include <utility>
 #include <vector>
 
+// At file scope: a member of the external-linkage Impl below may not use an
+// internal-linkage type (GCC -Wsubobject-linkage).
+struct BaseImageSamplingFootprint {
+    QRectF canvasRect;
+    QRectF coverage;
+    QSize pixelSize;
+};
+
 namespace {
 
 std::optional<SnowCursorStyle> baselineCursorForCanvasTool(SnowCanvasTool tool) {
@@ -125,12 +133,6 @@ bool hasFilter(const SnowCanvasSceneItem* sceneItems, std::uint32_t sceneItemCou
     }
     return false;
 }
-
-struct BaseImageSamplingFootprint {
-    QRectF canvasRect;
-    QRectF coverage;
-    QSize pixelSize;
-};
 
 std::vector<BaseImageSamplingFootprint>
 baseImageSamplingFootprints(const QList<SnowCanvasBaseImageSource>& sources) {

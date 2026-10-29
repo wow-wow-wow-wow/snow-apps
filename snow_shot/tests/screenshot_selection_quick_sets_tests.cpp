@@ -57,9 +57,9 @@ struct QuickSetFixture {
             ScreenshotSelectionEditWorkflowContext{
                 presentation.overlay, presentation.captureState, presentation.displays,
                 presentation.geometry, presentation.interaction, presentation.selection, ui,
-                [this](int radius, int shadow, const QColor& color) {
+                [this](const ScreenshotSelectionParams& params) {
                     ++effectWrites;
-                    settings.setSelectionEffects(radius, shadow, color);
+                    settings.setSelectionEffects(params);
                 }});
         presentation.commands.readSelectionQuickSets = [this] {
             ScreenshotSelectionToolbarQuickSets quickSets;

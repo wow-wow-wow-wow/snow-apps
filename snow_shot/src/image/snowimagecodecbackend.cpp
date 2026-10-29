@@ -1405,8 +1405,9 @@ int32_t snow_shot_image_codec_decode_skin_rgba8(const uint8_t* encoded, uint64_t
         }
         if (!sink.hasImage() ||
             (!decoded && decoded.error().code != snow::image::ErrorCode::cancelled)) {
-            *failure = decoded ? SNOW_SHOT_IMAGE_CODEC_SKIN_ERROR_INVALID_IMAGE
-                               : skinFailure(decoded.error());
+            *failure = decoded
+                           ? static_cast<std::uint32_t>(SNOW_SHOT_IMAGE_CODEC_SKIN_ERROR_INVALID_IMAGE)
+                           : skinFailure(decoded.error());
             return 0;
         }
         output->color = sink.releaseColor();

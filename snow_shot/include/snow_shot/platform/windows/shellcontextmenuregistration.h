@@ -23,9 +23,14 @@ struct ShellContextMenuRegistryKey {
     QMap<QString, ShellContextMenuRegistryValue> values;
     QMap<QString, ShellContextMenuRegistryKey> children;
 
+    // Defined out of line: the recursive children map needs the complete type,
+    // and an in-class defaulted comparison is deleted under GCC.
     friend bool operator==(const ShellContextMenuRegistryKey&,
-                           const ShellContextMenuRegistryKey&) = default;
+                           const ShellContextMenuRegistryKey&);
 };
+
+inline bool operator==(const ShellContextMenuRegistryKey& left,
+                       const ShellContextMenuRegistryKey& right) = default;
 
 // All paths are relative to HKCU. Injection keeps tests away from the user's registrations.
 struct ShellContextMenuRegistryAccess {

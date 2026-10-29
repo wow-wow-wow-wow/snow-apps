@@ -109,7 +109,7 @@ QImage composeSelectionResultFromRuntime(SnowCanvasRuntime& runtime, const QRect
     if (content.isNull()) {
         qWarning("Screenshot selection export failed: stage=render_canvas width=%d height=%d "
                  "sources=%lld",
-                 selection.width(), selection.height(), static_cast<long long>(sources.size()));
+                 selection.width(), selection.height(), sources.size());
         SNOW_SHOT_CLIPBOARD_PERF_COUNTER("export.failure.render_canvas", 1);
         return {};
     }
@@ -169,7 +169,7 @@ class ScreenshotExportWorker final : public QObject {
             SNOW_SHOT_PIN_PERF_SCOPE("export.restore_document");
             if (!m_runtime->restoreDocumentSession(documentSession)) {
                 qWarning("Screenshot selection export failed: stage=restore_document bytes=%lld",
-                         static_cast<long long>(documentSession.size()));
+                         documentSession.size());
                 SNOW_SHOT_CLIPBOARD_PERF_COUNTER("export.failure.restore_document", 1);
                 return {};
             }

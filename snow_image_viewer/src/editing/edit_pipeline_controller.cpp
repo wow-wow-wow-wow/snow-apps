@@ -979,8 +979,8 @@ void EditPipelineController::startSourceDecode(
                     return;
                 }
                 for (const PerformanceTiming& timing : result.timings) {
-                    if (!notify(&EditPipelineController::performanceStageCompleted, 0, timing.stage,
-                                timing.nanoseconds))
+                    if (!notify(&EditPipelineController::performanceStageCompleted,
+                                EditRequestId{0}, timing.stage, timing.nanoseconds))
                         return;
                 }
                 sourceAnalysis_ = result.analysis;

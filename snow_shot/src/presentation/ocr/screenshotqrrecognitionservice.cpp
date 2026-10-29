@@ -288,8 +288,8 @@ class ScreenshotQrRecognitionService::Impl final {
     }
 
   private:
-    using RequestToken = ScreenshotQrRecognitionPort::RequestToken;
-    using Completion = ScreenshotQrRecognitionPort::Completion;
+    // RequestToken/Completion resolve through ScreenshotQrRecognitionService's
+    // inherited aliases; redeclaring them here changes their meaning.
 
     struct Request {
         snow_shot::runtime::RuntimeActivityLease activity =

@@ -1304,8 +1304,9 @@ void textEditorCaretBlinksResetsAndHonorsSystemFlashTime() {
             "viewport creation should succeed for text caret blink tests");
 
     const QSize surfaceSize(200, 160);
-    require(snow_viewport_set_surface_size(runtime.get(), viewport.get(), surfaceSize.width(),
-                                           surfaceSize.height()) == SNOW_OK,
+    require(snow_viewport_set_surface_size(
+                runtime.get(), viewport.get(), static_cast<uint32_t>(surfaceSize.width()),
+                static_cast<uint32_t>(surfaceSize.height())) == SNOW_OK,
             "text caret blink viewport should accept its surface size");
     SnowCanvasDisplayCache displayCache;
     require(displayCache.sync(runtime.get(), viewport.get()),

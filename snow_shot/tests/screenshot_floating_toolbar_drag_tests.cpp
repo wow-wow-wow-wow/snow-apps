@@ -1433,7 +1433,10 @@ bool reusedToolbarFitsOnFirstShowAcrossScreens() {
     };
     Owner ownerA;
     Owner ownerB;
-    for (auto pair : {std::make_pair(&ownerA, screenA), std::make_pair(&ownerB, screenB)}) {
+    // Named arrays: GCC 16's -Wdangling-reference flags the initializer_list
+    // of make_pair temporaries behind a range-for.
+    const std::pair<Owner*, QScreen*> initialPairs[] = {{&ownerA, screenA}, {&ownerB, screenB}};
+    for (auto pair : initialPairs) {
         pair.first->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
         pair.first->setWindowOpacity(0.0);
         pair.first->winId();
@@ -1444,14 +1447,14 @@ bool reusedToolbarFitsOnFirstShowAcrossScreens() {
     NoOpToolbarCommands commands;
     ScreenshotToolbarWindow window(commands);
     ToolbarPaintExtentMonitor monitor(window);
-    for (auto pair : {std::make_pair(&ownerB, screenB), std::make_pair(&ownerA, screenA),
-                      std::make_pair(&ownerB, screenB), std::make_pair(&ownerA, screenA)}) {
+    const std::pair<Owner*, QScreen*> swapPairs[] = {{&ownerB, screenB}, {&ownerA, screenA},
+                                                     {&ownerB, screenB}, {&ownerA, screenA}};
+    for (auto pair : swapPairs) {
         window.hide();
         ownerA.retire();
         ownerB.retire();
         window.releaseNativeSurface();
-        for (auto ownerPair :
-             {std::make_pair(&ownerA, screenA), std::make_pair(&ownerB, screenB)}) {
+        for (auto ownerPair : initialPairs) {
             ownerPair.first->winId();
             ownerPair.first->windowHandle()->setScreen(ownerPair.second);
             ownerPair.first->setGeometry(ownerPair.second->geometry());

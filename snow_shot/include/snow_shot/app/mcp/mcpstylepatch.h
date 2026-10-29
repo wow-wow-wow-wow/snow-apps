@@ -361,10 +361,11 @@ inline bool mcpStylePatch(Commands& commands, Canvas& canvas, const QJsonObject&
             {QStringLiteral("source_outline"), SnowCanvasMagnifierStylePropertySourceOutline},
             {QStringLiteral("leader_arrowhead"), SnowCanvasMagnifierStylePropertyLeaderArrowhead},
             {QStringLiteral("arrow_ratio"), SnowCanvasMagnifierStylePropertyArrowRatio}};
-        const quint32 cornerProperties = patch.contains(QStringLiteral("corner_radius")) ||
-                                                 patch.contains(QStringLiteral("corner_radii"))
-                                             ? SnowCanvasMagnifierStylePropertyCornerRadius
-                                             : 0;
+        const quint32 cornerProperties =
+            patch.contains(QStringLiteral("corner_radius")) ||
+                    patch.contains(QStringLiteral("corner_radii"))
+                ? static_cast<quint32>(SnowCanvasMagnifierStylePropertyCornerRadius)
+                : quint32{0};
         quint32 flags = cornerProperties;
         for (auto it = patch.begin(); it != patch.end(); ++it)
             flags |= properties.value(it.key());

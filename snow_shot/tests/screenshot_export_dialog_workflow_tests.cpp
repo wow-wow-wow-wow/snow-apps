@@ -436,8 +436,12 @@ void persistence(const QTemporaryDir& temp) {
     require(
         !adapter.setSavePathShortcuts({values[0], {QStringLiteral("WORK"), QStringLiteral("x")}}),
         "duplicate shortcut writes must fail atomically");
+    // Named local: GCC 16's -Wdangling-pointer flags the braced temporary
+    // QVector bound directly to the const-ref parameter.
+    const QVector<storage::ScreenshotSavePathShortcut> invalidShortcuts = {
+        {QStringLiteral(" "), QStringLiteral("x")}};
     require(adapter.savePathShortcuts() == values &&
-                !adapter.setSavePathShortcuts({{QStringLiteral(" "), QStringLiteral("x")}}),
+                !adapter.setSavePathShortcuts(invalidShortcuts),
             "invalid writes must preserve shortcuts");
     require(storage::ApplicationStorage::instance().flushNow().success,
             "configuration flush failed");

@@ -21,10 +21,10 @@
 #include <optional>
 
 namespace snow_canvas_export {
-namespace {
 
-thread_local RenderDiagnostics g_renderDiagnostics;
-
+// Outside the anonymous namespace: external-linkage renderer classes hold
+// references to this type, and members may not use internal-linkage types
+// (GCC -Wsubobject-linkage).
 struct ExportProjection {
     QRectF canvasRect;
     QSize outputSize;
@@ -49,6 +49,10 @@ struct ExportProjection {
                       normalized.width() * scaleX(), normalized.height() * scaleY());
     }
 };
+
+namespace {
+
+thread_local RenderDiagnostics g_renderDiagnostics;
 
 qreal rasterScaleForProjection(const ExportProjection& projection) {
     return qMax(1.0, qMin(projection.scaleX(), projection.scaleY()));

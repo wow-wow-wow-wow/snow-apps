@@ -3682,7 +3682,8 @@ void webcamPreviewRetainsFramesAcrossLayoutUpdates() {
     const QImage initial = previewImage(*area.canvas());
     state->autoPublish = false;
     for (int step = 0; step < 40; ++step) {
-        configure(150 + step, QPoint(48 + step, 48 + step), step % 2, &camera);
+        configure(150 + step, QPoint(48 + step, 48 + step), static_cast<uint32_t>(step % 2),
+                  &camera);
         require(preview.hasFrame(),
                 "layout updates retain the camera until its replacement arrives");
         pumpPreview();
@@ -3806,7 +3807,8 @@ void recordingWebcamGesturesPersistAndFreezeAtStartup() {
                 [&] { return preview->webcamOrientation == static_cast<uint32_t>(orientation); },
                 "saved orientation reaches preview");
             orientationButtons[action]->click();
-            const int expected = transitions[orientation][action];
+            const int expected = transitions[static_cast<std::size_t>(orientation)]
+                                            [static_cast<std::size_t>(action)];
             waitForWebcam(
                 [&] { return preview->webcamOrientation == static_cast<uint32_t>(expected); },
                 "orientation action updates the current camera frame");

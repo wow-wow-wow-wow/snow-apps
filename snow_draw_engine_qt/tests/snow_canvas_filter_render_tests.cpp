@@ -3774,7 +3774,7 @@ void tiledRenderMatchesFullRender() {
 
         std::size_t mismatched = 0;
         int maxDelta = 0;
-        std::vector<int> columnsWithDiff(surfaceSize.width(), 0);
+        std::vector<int> columnsWithDiff(static_cast<std::size_t>(surfaceSize.width()), 0);
         for (int y = 0; y < surfaceSize.height(); ++y) {
             const auto* fullLine = reinterpret_cast<const QRgb*>(full.constScanLine(y));
             const auto* tiledLine = reinterpret_cast<const QRgb*>(tiled.constScanLine(y));

@@ -66,10 +66,12 @@ struct ScreenshotRecognitionWindowActions {
         return false;
     }
     static void ignoreResize(const QPointF&) {}
+    static void ignoreTableCommand(const ScreenshotTableCommandState&) {}
 
     std::function<void()> handleCancel = noAction;
     std::function<void(const QString&)> handleTextEdited = ignoreText;
-    std::function<void(const ScreenshotTableCommandState&)> handleTableCommandStateChanged;
+    std::function<void(const ScreenshotTableCommandState&)> handleTableCommandStateChanged =
+        ignoreTableCommand;
     std::function<void(const QString&)> handleTableOperationRejected = ignoreText;
     std::function<void(const QUrl&)> handleLinkActivated = ignoreLink;
     std::function<void()> handleUndoTextEdit = noAction;
