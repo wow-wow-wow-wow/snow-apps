@@ -52,7 +52,9 @@ snow_check_libclang() {
     if [[ -n "${LIBCLANG_PATH:-}" && -e "$LIBCLANG_PATH/libclang.so" ]]; then
         return
     fi
-    if ldconfig -p 2>/dev/null | grep -q 'libclang.*\.so' ||
+    # Not `grep -q`: under pipefail an early grep exit SIGPIPE-kills ldconfig
+    # (the cache exceeds the pipe buffer) and turns a match into a failure.
+    if ldconfig -p 2>/dev/null | grep 'libclang.*\.so' >/dev/null ||
         compgen -G '/usr/lib/llvm-*/lib/libclang.so*' >/dev/null; then
         return
     fi
