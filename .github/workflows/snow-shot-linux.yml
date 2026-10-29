@@ -56,7 +56,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             ninja-build pkg-config g++ gcc libclang-dev clang nasm \
             desktop-file-utils librsvg2-bin patchelf file \
-            curl zip unzip tar xz-utils
+            curl zip unzip tar xz-utils \
+            libgl1-mesa-dev libegl1-mesa-dev libvulkan-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libxcb1-dev \
+            libfontconfig1-dev libfreetype6-dev libdbus-1-dev libglib2.0-dev
 
       - name: Install CMake and aqtinstall
         run: |
