@@ -14,6 +14,12 @@ use crate::window::WindowId;
 #[cfg(target_os = "windows")]
 pub(crate) mod windows;
 
+// P0-T8 placeholder attachment point: `snow_linux::portal` becomes the real
+// Linux backend with P3-T1; until then Linux keeps UnsupportedBackend below.
+#[cfg(target_os = "linux")]
+#[allow(unused_imports)]
+pub use snow_linux::portal as linux_backend;
+
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn unsupported_error() -> CaptureError {
     CaptureError::platform(anyhow::anyhow!(

@@ -2147,6 +2147,7 @@ dependencies = [
  "snow-core",
  "snow-cursor",
  "snow-d3d11",
+ "snow-linux",
  "snow-macos",
  "snow-media",
  "snow-memory",
@@ -2213,6 +2214,10 @@ version = "0.1.0"
 dependencies = [
  "whatlang",
 ]
+
+[[package]]
+name = "snow-linux"
+version = "0.1.0"
 
 [[package]]
 name = "snow-macos"
