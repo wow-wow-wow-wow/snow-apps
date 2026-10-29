@@ -845,7 +845,7 @@
       ]
     },
     "snow-linux-media": {
-      "description": "Standalone Linux capture recording and export codecs with VA-API and software fallbacks",
+      "description": "Standalone Linux capture recording and export codecs with software fallbacks",
       "supports": "linux",
       "dependencies": [
         {
@@ -860,8 +860,7 @@
             "webp",
             "x264",
             "x265",
-            "zlib",
-            "vaapi"
+            "zlib"
           ]
         },
         {
