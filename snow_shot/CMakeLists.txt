@@ -756,6 +756,7 @@ elseif(WIN32)
     target_sources(snow_shot_memory_optimization PRIVATE src/platform/windows/memoryoptimization.cpp)
 else()
     target_sources(snow_shot_memory_optimization PRIVATE src/platform/linux/memoryoptimization.cpp)
+    target_link_libraries(snow_shot_memory_optimization PRIVATE Qt6::Gui)
 endif()
 if(WIN32)
     target_link_libraries(snow_shot_memory_optimization PRIVATE psapi user32)
@@ -1090,7 +1091,9 @@ endif()
 add_library(snow_shot_administrator STATIC
     src/platform/windows/autostartregistration.cpp
     src/platform/windows/shellcontextmenuregistration.cpp
-    src/platform/windows/administratorlaunch.cpp)
+    src/platform/windows/administratorlaunch.cpp
+    # XDG autostart reconciliation for Linux launches.
+    src/platform/linux/autostartregistration.cpp)
 target_include_directories(snow_shot_administrator PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(snow_shot_administrator PUBLIC Qt6::Core Qt6::Network)
 if(WIN32)
@@ -2094,6 +2097,8 @@ if(APPLE)
         src/platform/macos/systemtraymenu.mm
         src/platform/macos/windowcaptureexclusion.mm)
     list(APPEND PROJECT_HEADERS include/snow_shot/platform/macos/applicationactivation.h)
+elseif(UNIX)
+    list(APPEND PROJECT_CXX_SOURCES src/platform/linux/windowcaptureexclusion.cpp)
 endif()
 
 include(SnowSimd)
@@ -8436,6 +8441,10 @@ if(SNOW_SHOT_BUILD_TESTS)
         src/platform/windows/windowchrome.cpp
     )
     snow_shot_link_macos_window_platform(snow-shot-screen-recording-controller-tests)
+    if(UNIX AND NOT APPLE)
+        target_sources(snow-shot-screen-recording-controller-tests PRIVATE
+            src/platform/linux/windowcaptureexclusion.cpp)
+    endif()
     target_include_directories(snow-shot-screen-recording-controller-tests PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${SNOW_SHOT_CAPTURE_CRATES_DIR}/crates/snow-capture-c/include"
@@ -10807,6 +10816,58 @@ if(WIN32)
             CACHE INTERNAL "FFmpeg runtime files installed with Snow Shot.")
         unset(SNOW_RUNTIME_FILES)
     endif()
+elseif(UNIX)
+    # Linux resolves FFmpeg through pkg-config against the vcpkg install tree;
+    # the import-library and DLL staging concerns above are Windows-only.
+    set(_SNOW_SHOT_SAVED_PKG_CONFIG_PATH "$ENV{PKG_CONFIG_PATH}")
+    set(ENV{PKG_CONFIG_PATH} "${SNOW_FFMPEG_ROOT}/lib/pkgconfig")
+    find_package(PkgConfig REQUIRED)
+    set(_snow_ffmpeg_modules libavfilter libavformat libavcodec libswresample libswscale libavutil)
+    pkg_check_modules(SNOW_SHOT_FFMPEG REQUIRED IMPORTED_TARGET GLOBAL ${_snow_ffmpeg_modules})
+    set(ENV{PKG_CONFIG_PATH} "${_SNOW_SHOT_SAVED_PKG_CONFIG_PATH}")
+    unset(_SNOW_SHOT_SAVED_PKG_CONFIG_PATH)
+    # Canvas-only consumers also reach recording symbols in the bundled archive.
+    foreach(_snow_rust_bundle IN ITEMS snow_shot_rust_ffi_bundle snow_shot_full_rust_ffi_bundle)
+        if(TARGET ${_snow_rust_bundle})
+            target_link_libraries(${_snow_rust_bundle} INTERFACE PkgConfig::SNOW_SHOT_FFMPEG)
+        endif()
+    endforeach()
+    unset(_snow_rust_bundle)
+    target_link_libraries(snow_shot PRIVATE PkgConfig::SNOW_SHOT_FFMPEG)
+    if(TARGET snow-shot-screen-recording-controller-tests)
+        target_link_libraries(snow-shot-screen-recording-controller-tests PRIVATE
+            PkgConfig::SNOW_SHOT_FFMPEG
+        )
+    endif()
+    if(TARGET snow-shot-screenshot-canvas-renderer-tests)
+        target_link_libraries(snow-shot-screenshot-canvas-renderer-tests PRIVATE
+            PkgConfig::SNOW_SHOT_FFMPEG
+        )
+    endif()
+    # The toolbar benchmarks link the canvas engine, which pulls the Rust FFI
+    # bundle and with it the FFmpeg import libraries.
+    foreach(_snow_shot_ffmpeg_toolbar_benchmark IN ITEMS
+            snow-shot-table-preparation-benchmark
+            snow-shot-screenshot-toolbar-render-benchmark
+            snow-shot-screenshot-toolbar-display-benchmark
+            snow-shot-file-pin-batch-performance-benchmark)
+        if(TARGET ${_snow_shot_ffmpeg_toolbar_benchmark})
+            target_link_libraries(${_snow_shot_ffmpeg_toolbar_benchmark} PRIVATE
+                PkgConfig::SNOW_SHOT_FFMPEG
+            )
+        endif()
+    endforeach()
+    unset(_snow_shot_ffmpeg_toolbar_benchmark)
+    # The OCR background executables also reach the shared Rust bundle through the canvas.
+    foreach(_snow_shot_ocr_background_target IN ITEMS
+            snow-shot-ocr-background-tests
+            snow-shot-ocr-background-performance-benchmark)
+        if(TARGET ${_snow_shot_ocr_background_target})
+            target_link_libraries(${_snow_shot_ocr_background_target} PRIVATE
+                PkgConfig::SNOW_SHOT_FFMPEG)
+        endif()
+    endforeach()
+    unset(_snow_shot_ocr_background_target)
 endif()
 
 target_sources(snow_shot PRIVATE src/diagnostics/ffmpegdiagnostics.cpp)

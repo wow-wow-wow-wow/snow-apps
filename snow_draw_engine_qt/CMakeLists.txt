@@ -765,7 +765,9 @@ if(SNOW_DRAW_ENGINE_QT_BUILD_TESTS)
         tests/snow_canvas_smart_erase_quality_tests.cpp
         src/rendering/snow_canvas_smart_erase_algorithm.cpp
         src/rendering/snow_canvas_display_item.cpp
-        src/rendering/snow_canvas_render_geometry.cpp)
+        src/rendering/snow_canvas_render_geometry.cpp
+        # render_geometry and display_item reach the stroke-rendering cache.
+        src/rendering/snow_canvas_stroke_rendering.cpp)
     target_include_directories(snow-canvas-smart-erase-quality-tests PRIVATE
         include ${SNOW_CANVAS_QT_PRIVATE_SOURCE_DIRS}
         "${CMAKE_CURRENT_SOURCE_DIR}/crates/snow-draw-engine-c/include")
