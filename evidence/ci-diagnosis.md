@@ -27,3 +27,10 @@
 4. 至今没有"真实代码缺陷"类失败;全部是环境缺失(前 7 轮)或 GCC 严格警告(第 8-9 轮)。
 5. 预期后续失败点(§9.5-2):a) 更多 GCC `-Wextra` 警告(同类);b) Rust FFI 链接(ffmpeg pkg-config/libclang);c) 打包阶段(linuxdeploy/makepkg/appimagetool)。
 6. 本机(CachyOS, gcc? 待确认版本)与 CI(ubuntu-24.04 gcc-13)的 GCC 警告行为可能有差异,本地验证时同样开 `SNOW_APPS_STRICT_COMPILE=ON`(preset 已带),能覆盖 CI 的警告集合;GCC 版本越新警告越严,本地更严是好事。
+
+## 追加轮次(2026-10-31)
+
+| Run ID | 耗时 | 失败点 | 分类 | 根因 / 修复 |
+|---|---|---|---|---|
+| 40978668164 | 42m39s | 编译(snow_shot_settings unity_3) | 警告升级 | gcc-13 特有 `-Wsubobject-linkage`:settingscustomwidget/settingspagewidget 的外部链接类成员引用全局匿名命名空间类型。GCC 16 不再报此警告(本地漏网)。修复:两个文件的相关类型提升出匿名 ns(329a62e1 的一部分,commit bbfec34f 后续) |
+| 41127295313 | 1h15m | Stage AppDir | 环境缺失(脚本 bug) | 编译全过(subobject-linkage 修复生效)!我改的 qt bin 解析在 ubuntu(aqt kit,无 qmake6)上回退为空。修复:候选列表式解析(aqt $/../../bin → 系统 qmake6 → qmake),commit d420c2da。**注意:此 run 证明 CI 编译+链接全绿** |

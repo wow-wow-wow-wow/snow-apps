@@ -17,7 +17,7 @@
 | P0-T6 | DONE | 三处 else() 默认 Windows 源已消灭(上一会话)+ 本轮把 linux 平台源挂进各目标(evidence/P0-T6/audit.md) |
 | P0-T7 | DONE | libsnow_shot_rust_ffi.a 存在(483MB debug,evidence/P0-T7/artifact.txt);snow-linux/capture 等 crate clippy -D warnings 全过;FFMPEG_DIR 走 vcpkg 树(ffmpeg-link.md) |
 | P0-T8 | DONE | snow-linux crate 建立;**snow-all 783/783 目标编译+链接全绿**(GCC 16.2.1 严格警告,evidence/P0-T8/snow-all.log);ctest -L unit 已跑(见 §3) |
-| P0-GATE | BLOCKED(待干净重编) | 增量全绿已证;`--clean-first` 干净重编未执行;推送后 CI 绿为最终判定。**这是下一会话第一件事** |
+| P0-GATE | DONE(待CI) | `--clean-first` 干净重编 5695/5695 全绿(evidence/P0-GATE/clean-rebuild.log);CI 编译+链接已在 run 41127295313 验证通过;打包步骤两轮脚本修复后由 run 41137556133 终判 |
 | P2-T4 | DONE(待VM) | XDG autostart + 更新器禁用(上一会话遗留状态,未变) |
 | P8-T1 | DONE(待VM) | 打包链本机实跑:修复 3 个脚本 bug 后 AppDir 就绪(94 个库),payload tar + makepkg 产出 .pkg.tar.zst;安装/启动验证 BLOCKED(manual);AppImage 路径(--plugin qt)失败待适配 |
 | P1-T1 及之后 | TODO | 未开始(P0-GATE 是前置) |
@@ -69,7 +69,7 @@ snow-shot   # 启动(依赖系统 qt6-base/qt6-wayland,本机已装 6.12.0)
 
 ## 5. 未完成项与下一会话起点
 
-1. **P0-GATE**:`cmake --build --preset build-linux-gcc-debug --target snow-all --clean-first`(约 1-1.5h,ccache 已配);同时确认推送后 CI 绿(见 §6)。
+1. **CI 终判**:run 41127295313 证明 CI 编译+链接全绿(gcc-13 的 subobject-linkage 批次已修);Stage AppDir 的 qt bin 解析 bug 已修(d420c2da),由 run 41137556133 终判。红了按 log-failed 继续。
 2. **P1-T1**(viewer 平台后端)是 P0-GATE 后第一张功能卡;P1-T2 的 `scripts/package-linux-dev.sh` 未建。
 3. 欠账清单:snow-recording-export 6 个 Linux 既有测试失败(键盘渲染 Win-only ×3、muxer 全量注册、ffmpeg_util rgba_copy ×2,已用 stash 对照确认非本轮引入);vcpkg ffmpeg muxer 白名单问题(P5-T7);AppImage 的 qt 插件适配。
 4. 本会话新增的构建环境事实(下一会话直接复用):Qt6_DIR=/usr/lib/cmake/Qt6;并行 -j6;ccache 已挂;sudo 不可用;~/.local/bin 有自编译 zip 3.0。
