@@ -60,18 +60,23 @@ cp "$snow_repo_root/packaging/linux/AppRun.in" "$app_dir/AppRun"
 chmod 755 "$app_dir/AppRun"
 
 # 5. Bundle shared libraries with linuxdeploy + the Qt plugin.
-qt_bin_dir="$(dirname "$(dirname "$(sed -n 's/^Qt6_DIR:[^=]*=//p' "$build_dir/CMakeCache.txt" | head -n 1)")")/bin"
-if [[ ! -x "$qt_bin_dir/qmake" ]]; then
-    # Distro kits (e.g. Arch's /usr/lib/cmake/Qt6) do not follow the aqt
-    # <kit>/lib/cmake layout; fall back to the system qmake6.
-    qt_bin_dir="$(dirname "$(command -v qmake6)")"
-fi
-[[ -x "$qt_bin_dir/qmake" || -x "$qt_bin_dir/qmake6" ]] ||
-    snow_die "Unable to resolve the Qt bin directory from the build cache: $qt_bin_dir"
+qt_cmake_dir="$(sed -n 's/^Qt6_DIR:[^=]*=//p' "$build_dir/CMakeCache.txt" | head -n 1)"
+qt_bin_dir=''
+for candidate in "$qt_cmake_dir/../../bin" "$(dirname "$(command -v qmake6 2>/dev/null)")" \
+    "$(dirname "$(command -v qmake 2>/dev/null)")"; do
+    if [[ -n "$candidate" && (-x "$candidate/qmake" || -x "$candidate/qmake6") ]]; then
+        qt_bin_dir="$(cd "$candidate" && pwd)"
+        break
+    fi
+done
+# The aqt kit resolves through <kit>/lib/cmake/Qt6 -> <kit>/bin; distro kits
+# (e.g. Arch's /usr/lib/cmake/Qt6) fall through to the system qmake6.
+[[ -n "$qt_bin_dir" ]] ||
+    snow_die "Unable to resolve the Qt bin directory from the build cache: $qt_cmake_dir"
 if [[ -x "$qt_bin_dir/qmake" ]]; then
     export QMAKE="$qt_bin_dir/qmake"
 else
-    export QMAKE="$(command -v qmake6)"
+    export QMAKE="$qt_bin_dir/qmake6"
 fi
 export PATH="$qt_bin_dir:$PATH"
 
