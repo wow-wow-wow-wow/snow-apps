@@ -203,6 +203,11 @@ QString cssColor(const QColor& color) {
         .arg(color.alpha());
 }
 
+} // namespace
+
+// At file scope: ToolbarEditorSettingsWidget::Private below holds pointers,
+// containers, and hashes of these types, and external-linkage classes may not
+// expose internal-linkage member types (GCC -Wsubobject-linkage).
 class ToolbarDragButton final : public adqt::widgets::AdButton {
   public:
     explicit ToolbarDragButton(const QString& itemId, const QString& objectNamePrefix,
@@ -738,7 +743,6 @@ void clearPosition(ToolbarPositionWidget* position) {
         delete item;
     }
 }
-} // namespace
 
 class TrayMenuOptionsSettingsWidget final : public SettingsCustomWidget {
   public:

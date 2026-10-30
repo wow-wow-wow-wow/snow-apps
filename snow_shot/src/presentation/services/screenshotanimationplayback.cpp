@@ -345,12 +345,6 @@ AnimationMemoryBudget& memoryBudget() {
     return *budget;
 }
 
-struct AnimationWorkerDiagnostics final {
-    std::atomic<quint64> cacheHits = 0;
-    std::atomic<quint64> cacheMisses = 0;
-    std::atomic<quint64> decoderResets = 0;
-    std::atomic<quint64> compositedFrames = 0;
-};
 
 QImage prepareImagePixels(QImage& original, const QTransform& transform,
                           const ScreenshotAnimationPlayback::PreparationCancellation& cancelled) {
@@ -490,6 +484,16 @@ startImagePreparation(QObject* context, QImage original, const QTransform& trans
     return cancelled;
 }
 
+} // namespace
+
+// At file scope: an external-linkage class below holds fields of these
+// types; internal-linkage member types trip GCC's -Wsubobject-linkage.
+struct AnimationWorkerDiagnostics final {
+    std::atomic<quint64> cacheHits = 0;
+    std::atomic<quint64> cacheMisses = 0;
+    std::atomic<quint64> decoderResets = 0;
+    std::atomic<quint64> compositedFrames = 0;
+};
 struct AnimationDecodeWorker final {
     explicit AnimationDecodeWorker(std::shared_ptr<AnimationWorkerDiagnostics> value)
         : diagnostics(std::move(value)) {}
@@ -627,7 +631,6 @@ struct AnimationDecodeWorker final {
         completion(std::move(original), std::move(transformed), std::move(error));
     }
 };
-} // namespace
 
 struct ScreenshotAnimationPlayback::Impl {
     struct Lifetime {

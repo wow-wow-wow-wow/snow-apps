@@ -112,7 +112,8 @@ selectionVisualState(const ScreenshotPresentationServicesContext& context, bool 
 }
 } // namespace
 
-namespace {
+// At file scope: an external-linkage class below holds fields of these
+// types; internal-linkage member types trip GCC's -Wsubobject-linkage.
 struct PresentationSnapshot {
     ScreenshotToolbarPresentationState toolbar;
     ScreenshotSelectionVisualState visual;
@@ -121,6 +122,8 @@ struct PresentationSnapshot {
     ScreenshotSelectionDragMode dragMode = ScreenshotSelectionDragMode::None;
     bool operator==(const PresentationSnapshot&) const = default;
 };
+
+namespace {
 
 enum class ColorPickerSource { None, Hover, SelectionDrag };
 } // namespace

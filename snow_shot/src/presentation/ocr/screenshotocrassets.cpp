@@ -41,6 +41,31 @@
 #include <optional>
 #include <mutex>
 
+struct FileDescriptor {
+    QString name;
+    QUrl url;
+    qint64 size = -1;
+    QByteArray sha256;
+};
+struct ModelDescriptor {
+    ScreenshotOcrModelType type = ScreenshotOcrModelType::Small;
+    QString id;
+    QString detector;
+    QString recognizer;
+    QString dictionary;
+    QList<FileDescriptor> files;
+};
+struct Descriptor {
+    bool bundled = false;
+    QString executable;
+    QString runtimeVersion;
+    QString platform;
+    FileDescriptor runtimeArchive;
+    QList<FileDescriptor> runtimeFiles;
+    ScreenshotOcrModelType defaultModel = ScreenshotOcrModelType::Small;
+    QList<ModelDescriptor> models;
+};
+
 namespace {
 constexpr auto kManifestName = "asset-manifest.json";
 #if defined(Q_OS_MACOS) && defined(Q_PROCESSOR_ARM_64)
@@ -64,32 +89,8 @@ bool interruptionRequested() {
     return thread != nullptr && thread->isInterruptionRequested();
 }
 
-struct FileDescriptor {
-    QString name;
-    QUrl url;
-    qint64 size = -1;
-    QByteArray sha256;
-};
 
-struct ModelDescriptor {
-    ScreenshotOcrModelType type = ScreenshotOcrModelType::Small;
-    QString id;
-    QString detector;
-    QString recognizer;
-    QString dictionary;
-    QList<FileDescriptor> files;
-};
 
-struct Descriptor {
-    bool bundled = false;
-    QString executable;
-    QString runtimeVersion;
-    QString platform;
-    FileDescriptor runtimeArchive;
-    QList<FileDescriptor> runtimeFiles;
-    ScreenshotOcrModelType defaultModel = ScreenshotOcrModelType::Small;
-    QList<ModelDescriptor> models;
-};
 
 struct ModelContract {
     const char* id;
@@ -778,6 +779,9 @@ bool extractRuntime(const QString& archive, const QString& staging,
 }
 
 } // namespace
+
+// At file scope: an external-linkage class below holds fields of these
+// types; internal-linkage member types trip GCC's -Wsubobject-linkage.
 
 QString screenshotOcrModelTypeValue(ScreenshotOcrModelType type) {
     switch (type) {

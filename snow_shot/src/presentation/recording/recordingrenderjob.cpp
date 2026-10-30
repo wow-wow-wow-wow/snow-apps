@@ -38,14 +38,6 @@ template <typename Read> QString nativeString(Read read) {
     read(bytes.data(), required);
     return QString::fromUtf8(bytes.constData());
 }
-struct StartResult {
-    SnowRecordingRenderTask* task = nullptr;
-    QString error;
-};
-struct CleanupResult {
-    QString error;
-    SnowRecordingSource* retainedSource = nullptr;
-};
 
 // Keep native ownership in std::future for detached shutdown, and notify the GUI
 // only after that future is ready. Finishing a Qt promise inside std::async's
@@ -69,6 +61,17 @@ template <typename Work> auto runNotifying(QFutureWatcher<void>& watcher, Work w
     return future;
 }
 } // namespace
+
+// At file scope: an external-linkage class below holds fields of these
+// types; internal-linkage member types trip GCC's -Wsubobject-linkage.
+struct StartResult {
+    SnowRecordingRenderTask* task = nullptr;
+    QString error;
+};
+struct CleanupResult {
+    QString error;
+    SnowRecordingSource* retainedSource = nullptr;
+};
 
 struct RecordingRenderJob::Impl {
     explicit Impl(RecordingRenderJob& owner, SnowRecordingSource* source, bool visible,

@@ -211,6 +211,10 @@ ScreenshotQrRecognitionResult recognizeImage(QImage source, const std::atomic_bo
     return {{}, recognitionFailedMessage(), {}};
 }
 
+} // namespace
+
+// At file scope: an external-linkage class below holds fields of these
+// types; internal-linkage member types trip GCC's -Wsubobject-linkage.
 class QrWorker final : public QObject {
   public:
     explicit QrWorker(QString modelsDirectory) : m_modelsDirectory(std::move(modelsDirectory)) {}
@@ -224,7 +228,6 @@ class QrWorker final : public QObject {
     const QString m_modelsDirectory;
     std::optional<BarcodeDecoders> m_decoders;
 };
-} // namespace
 
 class ScreenshotQrRecognitionService::Impl final {
   public:
