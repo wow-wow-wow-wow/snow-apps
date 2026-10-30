@@ -24,7 +24,7 @@ done
 [[ -n "$app_dir" && -d "$app_dir/usr/bin" ]] || snow_die "Not a staged AppDir (missing usr/bin): $app_dir"
 [[ -n "$version" ]] || snow_die '--version is required'
 [[ "$(uname -s)" == Linux ]] || snow_die 'Debian packaging requires a Linux host.'
-command -v dpkg-deb >/dev/null || snow_die 'dpkg-deb is required.'
+
 
 mkdir -p "$output_dir"
 stage="$(mktemp -d)"
@@ -70,6 +70,12 @@ if [[ -n "$payload_tar" ]]; then
     tar -C "$pkg_root" --exclude=./DEBIAN -caf "$payload_tar" .
     printf 'Payload tarball: %s\n' "$payload_tar"
 fi
-deb_path="$output_dir/snow-shot_${version}_amd64.deb"
-dpkg-deb --root-owner-group --build "$pkg_root" "$deb_path"
-printf 'Debian package: %s\n' "$deb_path"
+if command -v dpkg-deb >/dev/null; then
+    deb_path="$output_dir/snow-shot_${version}_amd64.deb"
+    dpkg-deb --root-owner-group --build "$pkg_root" "$deb_path"
+    printf 'Debian package: %s\n' "$deb_path"
+elif [[ -z "$payload_tar" ]]; then
+    snow_die 'dpkg-deb is required unless --payload-tar output is requested.'
+else
+    printf 'dpkg-deb unavailable; emitted the payload tarball only.\n'
+fi

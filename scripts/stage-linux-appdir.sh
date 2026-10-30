@@ -11,12 +11,15 @@ build_dir=''
 app_dir="$snow_repo_root/build/linux-appdir"
 version=''
 tools_cache="$snow_repo_root/.tools/linuxdeploy"
+skip_qt_plugin=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --build-dir) [[ $# -ge 2 ]] || snow_die '--build-dir needs a directory'; build_dir="$2"; shift 2 ;;
         --appdir) [[ $# -ge 2 ]] || snow_die '--appdir needs a directory'; app_dir="$2"; shift 2 ;;
         --version) [[ $# -ge 2 ]] || snow_die '--version needs a value'; version="$2"; shift 2 ;;
         --tools-cache) [[ $# -ge 2 ]] || snow_die '--tools-cache needs a directory'; tools_cache="$2"; shift 2 ;;
+        # Distro packages rely on the system Qt instead of bundling its plugins.
+        --skip-qt-plugin) skip_qt_plugin=1; shift ;;
         *) snow_die "Unknown argument: $1" ;;
     esac
 done
@@ -58,7 +61,19 @@ chmod 755 "$app_dir/AppRun"
 
 # 5. Bundle shared libraries with linuxdeploy + the Qt plugin.
 qt_bin_dir="$(dirname "$(dirname "$(sed -n 's/^Qt6_DIR:[^=]*=//p' "$build_dir/CMakeCache.txt" | head -n 1)")")/bin"
-[[ -x "$qt_bin_dir/qmake" ]] || snow_die "Unable to resolve the Qt bin directory from the build cache: $qt_bin_dir"
+if [[ ! -x "$qt_bin_dir/qmake" ]]; then
+    # Distro kits (e.g. Arch's /usr/lib/cmake/Qt6) do not follow the aqt
+    # <kit>/lib/cmake layout; fall back to the system qmake6.
+    qt_bin_dir="$(dirname "$(command -v qmake6)")"
+fi
+[[ -x "$qt_bin_dir/qmake" || -x "$qt_bin_dir/qmake6" ]] ||
+    snow_die "Unable to resolve the Qt bin directory from the build cache: $qt_bin_dir"
+if [[ -x "$qt_bin_dir/qmake" ]]; then
+    export QMAKE="$qt_bin_dir/qmake"
+else
+    export QMAKE="$(command -v qmake6)"
+fi
+export PATH="$qt_bin_dir:$PATH"
 
 mkdir -p "$tools_cache"
 linuxdeploy="$tools_cache/linuxdeploy-x86_64.AppImage"
@@ -74,8 +89,21 @@ fetch_tool() {
 fetch_tool 'https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage' "$linuxdeploy"
 fetch_tool 'https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage' "$plugin_qt"
 
-export QMAKE="$qt_bin_dir/qmake"
-export PATH="$qt_bin_dir:$PATH"
+# linuxdeploy resolves DT_NEEDED entries against the search path; the vcpkg
+# libraries live outside the default directories, so expose them here and let
+# linuxdeploy copy the needed ones into the AppDir.
+vcpkg_installed_dir="$(sed -n 's/^VCPKG_INSTALLED_DIR:[^=]*=//p' "$build_dir/CMakeCache.txt" | head -n 1)"
+vcpkg_triplet="$(sed -n 's/^VCPKG_TARGET_TRIPLET:[^=]*=//p' "$build_dir/CMakeCache.txt" | head -n 1)"
+if [[ -d "$vcpkg_installed_dir/$vcpkg_triplet/lib" ]]; then
+    # Debug builds link the *d-suffixed libraries from the triplet's
+    # debug/lib; expose both trees so linuxdeploy can resolve either.
+    export LD_LIBRARY_PATH="$vcpkg_installed_dir/$vcpkg_triplet/lib:$vcpkg_installed_dir/$vcpkg_triplet/debug/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
+# Project-shared libraries live across the build tree; make them resolvable
+# too so linuxdeploy bundles them next to the executable.
+while IFS= read -r so_dir; do
+    export LD_LIBRARY_PATH="$so_dir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+done < <(find "$build_dir" -maxdepth 4 -name '*.so*' -printf '%h\n' 2>/dev/null | sort -u)
 
 deploy_args=(--executable "$app_dir/usr/bin/snow_shot")
 while IFS= read -r executable; do
@@ -85,11 +113,17 @@ while IFS= read -r shared_library; do
     deploy_args+=(--executable "$shared_library")
 done < <(find "$app_dir/usr/lib" -maxdepth 1 -type f -name '*.so*' 2>/dev/null || true)
 
-"$linuxdeploy" --appimage-extract-and-run \
-    --appdir "$app_dir" \
-    "${deploy_args[@]}" \
-    --desktop-file "$app_dir/usr/share/applications/snow_shot.desktop" \
-    --icon-file "$app_dir/usr/share/icons/hicolor/256x256/apps/snow-shot.png" \
-    --plugin qt
+linuxdeploy_args=(--appdir "$app_dir" "${deploy_args[@]}"
+    --desktop-file "$app_dir/usr/share/applications/snow_shot.desktop"
+    --icon-file "$app_dir/usr/share/icons/hicolor/256x256/apps/snow-shot.png")
+if [[ "$skip_qt_plugin" == 0 ]]; then
+    linuxdeploy_args+=(--plugin qt)
+else
+    # Distro-package mode: Qt libraries and their plugins come from the
+    # system packages, so keep them out of the payload.
+    linuxdeploy_args+=(--exclude-library 'libQt6*')
+fi
+
+"$linuxdeploy" --appimage-extract-and-run "${linuxdeploy_args[@]}"
 
 printf 'AppDir ready: %s\n' "$app_dir"

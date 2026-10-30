@@ -1,0 +1,1 @@
+libsnow_shot_rust_ffi.a: build/linux-gcc-debug/cargo/x86_64-unknown-linux-gnu/debug/libsnow_shot_rust_ffi.a (483MB, debug)
