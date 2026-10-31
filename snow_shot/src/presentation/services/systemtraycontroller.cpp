@@ -471,6 +471,10 @@ class SystemTrayController::Impl {
 
         setMenuOptions({});
 
+#ifndef Q_OS_MACOS
+        trayIcon->setContextMenu(dbusMenu_);
+#endif
+
         // Cocoa opens an attached menu on left-click too. Handle Context explicitly there.
         QObject::connect(trayIcon, &QSystemTrayIcon::activated, &q,
                          [this](QSystemTrayIcon::ActivationReason reason) {
@@ -535,6 +539,113 @@ class SystemTrayController::Impl {
         delete popupAnchor_;
         popupAnchor_ = nullptr;
 #endif
+    }
+
+    // Plain-QMenu mirror of the tray menu for StatusNotifierItem hosts: their
+    // right-click popup is rendered from the exported DBusMenu, and the skinned
+    // AdContextMenu's widget items never reach that export. Rebuilt in full on
+    // every options change so item visibility always matches the export.
+    void rebuildDBusMenu() {
+        if (dbusMenu_ == nullptr) {
+            dbusMenu_ = new QMenu();
+            dbusMenu_->setObjectName(QStringLiteral("systemTrayDBusMenu"));
+        }
+        dbusMenu_->clear();
+        dbusActions_.clear();
+        dbusCheckableActions_.clear();
+        dbusSeparators_.clear();
+
+        const QSet<QString> requested(menuOptions.cbegin(), menuOptions.cend());
+        QVector<bool> groupVisible(groups.size(), false);
+        for (int groupIndex = 0; groupIndex < groups.size(); ++groupIndex) {
+            for (const settings::SettingsTrayMenuOptionDefinition& option :
+                 groups.at(groupIndex).options) {
+                groupVisible[groupIndex] =
+                    groupVisible[groupIndex] || requested.contains(option.id);
+            }
+        }
+
+        bool priorGroupVisible = false;
+        for (int groupIndex = 0; groupIndex < groups.size(); ++groupIndex) {
+            const settings::SettingsTrayMenuGroupDefinition& group = groups.at(groupIndex);
+            if (groupIndex > 0) {
+                QAction* separator = dbusMenu_->addSeparator();
+                separator->setVisible(priorGroupVisible && groupVisible.at(groupIndex));
+                dbusSeparators_.append(separator);
+            }
+            for (const settings::SettingsTrayMenuOptionDefinition& option : group.options) {
+                if (option.kind == settings::SettingsTrayMenuOptionKind::WindowGrouping) {
+                    continue;
+                }
+                if (!requested.contains(option.id)) {
+                    continue;
+                }
+#if SNOW_SHOT_ENABLE_EXTENDED_FEATURES
+                if (option.shortcutAction == GlobalShortcutAction::TranslateSelectedText &&
+                    !snow_shot::storage::ExtendedFeaturesSettings().translationPageEnabled()) {
+                    continue;
+                }
+#endif
+                QAction* action = dbusMenu_->addAction(QString());
+                action->setData(option.id);
+                dbusActions_.insert(option.id, action);
+                switch (option.kind) {
+                case settings::SettingsTrayMenuOptionKind::QuickAction:
+                    QObject::connect(action, &QAction::triggered, &q,
+                                     [this, shortcutAction = option.shortcutAction]() {
+                                         emit q.quickActionRequested(shortcutAction);
+                                     });
+                    if (option.checkable) {
+                        action->setCheckable(true);
+                        action->setChecked(checkedQuickActions.value(option.shortcutAction));
+                        dbusCheckableActions_.insert(option.shortcutAction, action);
+                    }
+                    break;
+                case settings::SettingsTrayMenuOptionKind::ShowMainWindow:
+                    QObject::connect(action, &QAction::triggered, &q,
+                                     &SystemTrayController::showMainWindowRequested);
+                    break;
+                case settings::SettingsTrayMenuOptionKind::RestartApp:
+                    QObject::connect(action, &QAction::triggered, &q,
+                                     &SystemTrayController::restartRequested);
+                    break;
+                case settings::SettingsTrayMenuOptionKind::Exit:
+                    QObject::connect(action, &QAction::triggered, &q,
+                                     &SystemTrayController::exitRequested);
+                    break;
+                case settings::SettingsTrayMenuOptionKind::WindowGrouping:
+                    break;
+                }
+            }
+            priorGroupVisible = groupVisible.at(groupIndex);
+        }
+        syncDBusMenuTexts();
+    }
+
+    void syncDBusMenuTexts() {
+        for (const settings::SettingsTrayMenuGroupDefinition& group : groups) {
+            for (const settings::SettingsTrayMenuOptionDefinition& option : group.options) {
+                if (QAction* action = dbusActions_.value(option.id)) {
+                    const QString label =
+                        option.kind == settings::SettingsTrayMenuOptionKind::QuickAction
+                            ? manifest.shortcutActionTitle(option.shortcutAction,
+                                                           screenshotDelaySeconds)
+                            : option.label.translated();
+                    const QString shortcut =
+                        option.kind == settings::SettingsTrayMenuOptionKind::QuickAction
+                            ? shortcuts::formatShortcutListDisplayText(
+                                  shortcutBindings.value(option.shortcutAction))
+                            : QString();
+                    action->setText(shortcut.isEmpty() ? label
+                                                       : label + QLatin1Char('\t') + shortcut);
+                }
+            }
+        }
+    }
+
+    void setDBusMenuOptions(const QStringList& options) {
+        menuOptions = options;
+        rebuildDBusMenu();
     }
 
     adqt::widgets::AdContextMenu* createMenu() {
@@ -804,10 +915,14 @@ class SystemTrayController::Impl {
                 }
             }
         }
+#ifndef Q_OS_MACOS
+        syncDBusMenuTexts();
+#endif
         requestGroupMenuRefresh();
     }
 
     void setMenuOptions(const QStringList& options) {
+        qWarning().nospace() << "[tray] setMenuOptions size=" << options.size();
         const QSet<QString> requested(options.cbegin(), options.cend());
         QStringList normalized;
         QVector<bool> visibleGroups(groups.size(), false);
@@ -835,6 +950,9 @@ class SystemTrayController::Impl {
             }
         }
         menuOptions = normalized;
+#ifndef Q_OS_MACOS
+        setDBusMenuOptions(normalized);
+#endif
 
         bool priorGroupVisible = visibleGroups.value(0, false);
         for (int groupIndex = 1; groupIndex < groups.size(); ++groupIndex) {
@@ -907,6 +1025,15 @@ class SystemTrayController::Impl {
     QList<QPointer<adqt::widgets::AdContextMenu>> menus;
     QSystemTrayIcon* trayIcon = nullptr;
     QWidget* popupAnchor_ = nullptr;
+#ifndef Q_OS_MACOS
+    // StatusNotifierItem hosts (Plasma) render this plain menu through the
+    // exported DBusMenu. The skinned AdContextMenu above is a widget-driven
+    // popup whose items never reach that export.
+    QMenu* dbusMenu_ = nullptr;
+    QHash<QString, QAction*> dbusActions_;
+    QVector<QAction*> dbusSeparators_;
+    QHash<GlobalShortcutAction, QAction*> dbusCheckableActions_;
+#endif
 #ifdef Q_OS_MACOS
     std::unique_ptr<platform::macos::SystemNotificationService> notifications;
 #endif
@@ -1159,6 +1286,11 @@ void SystemTrayController::setQuickActionChecked(GlobalShortcutAction action, bo
     if (QAction* trayAction = m_impl->checkableQuickActions.value(action)) {
         trayAction->setChecked(checked);
     }
+#ifndef Q_OS_MACOS
+    if (QAction* mirrorAction = m_impl->dbusCheckableActions_.value(action)) {
+        mirrorAction->setChecked(checked);
+    }
+#endif
 }
 
 void SystemTrayController::setFocusedFullscreenSuppressionActive(bool active) {
