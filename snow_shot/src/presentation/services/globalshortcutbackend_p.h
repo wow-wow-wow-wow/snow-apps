@@ -15,6 +15,10 @@ namespace snow_shot::presentation {
 #ifdef Q_OS_MACOS
 [[nodiscard]] std::unique_ptr<GlobalShortcutBackend> createMacOSGlobalShortcutBackend();
 #endif
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+// Null when the session bus or the GlobalShortcuts portal is unavailable.
+[[nodiscard]] std::unique_ptr<GlobalShortcutBackend> createPortalGlobalShortcutBackend();
+#endif
 
 } // namespace snow_shot::presentation
 

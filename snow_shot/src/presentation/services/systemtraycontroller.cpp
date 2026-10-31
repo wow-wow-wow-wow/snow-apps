@@ -462,6 +462,16 @@ class SystemTrayController::Impl {
 
         setMenuOptions({});
 
+#ifndef Q_OS_MACOS
+        // StatusNotifierItem hosts render the context menu from the exported
+        // DBusMenu, so the menu must exist ahead of the first right-click and
+        // outlive being hidden (no delete-on-hide on Linux).
+        if (menu) {
+            menu->setDeleteOnHide(false);
+            trayIcon->setContextMenu(menu);
+        }
+#endif
+
         // Cocoa opens an attached menu on left-click too. Handle Context explicitly there.
         QObject::connect(trayIcon, &QSystemTrayIcon::activated, &q,
                          [this](QSystemTrayIcon::ActivationReason reason) {
@@ -478,6 +488,11 @@ class SystemTrayController::Impl {
                                  dispatchClickAction(middleClickAction);
                              } else if (reason == QSystemTrayIcon::Context) {
                                  if (menu && menu->isPopupVisible())
+                                     return;
+                                 // StatusNotifierItem hosts (Plasma, GNOME's
+                                 // AppIndicator) show the attached menu through the
+                                 // exported DBusMenu; a second manual popup would duplicate it.
+                                 if (trayIcon->contextMenu() != nullptr)
                                      return;
                                  auto* popup = createMenu();
 #ifdef Q_OS_MACOS

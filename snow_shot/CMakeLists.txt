@@ -124,7 +124,7 @@ if(WIN32 AND (SNOW_SHOT_BUILD_TESTS OR SNOW_SHOT_DISTRIBUTION_CHANNEL STREQUAL "
 endif()
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/SnowQt.cmake")
-snow_find_qt(COMPONENTS Widgets LinguistTools Svg Network)
+    snow_find_qt(COMPONENTS Widgets LinguistTools Svg Network DBus)
 
 add_library(snow_shot_distribution STATIC
     include/snow_shot/app/distribution.h
@@ -1006,6 +1006,9 @@ elseif(APPLE)
     list(APPEND SNOW_SHOT_GLOBAL_SHORTCUT_SOURCES
         src/platform/macos/globalshortcutbackend.cpp
         src/platform/macos/focusedfullscreenwindow.mm)
+elseif(UNIX)
+    list(APPEND SNOW_SHOT_GLOBAL_SHORTCUT_SOURCES
+        src/platform/linux/globalshortcutbackend_portal.cpp)
 endif()
 list(APPEND SNOW_SHOT_SETTINGS_SOURCES ${SNOW_SHOT_GLOBAL_SHORTCUT_SOURCES})
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/presentation/components/screenshothistorypagewidget.cpp"
@@ -1189,7 +1192,8 @@ target_compile_definitions(snow_shot_settings PRIVATE
     SNOW_SHOT_PROJECT_URL="${SNOW_SHOT_PROJECT_URL}"
     SNOW_SHOT_QQ_GROUP_3_URL="${SNOW_SHOT_QQ_GROUP_3_URL}"
 )
-target_link_libraries(snow_shot_settings PRIVATE snow_shot_image_codec Qt6::Svg Qt6::Network snow_shot_administrator)
+target_link_libraries(snow_shot_settings PRIVATE snow_shot_image_codec Qt6::Svg Qt6::Network
+    Qt6::DBus snow_shot_administrator)
 add_library(snow_shot_global_mouse STATIC
     include/snow_shot/presentation/globalmousemanager.h
     include/snow_shot/presentation/globalmousegesture.h
@@ -2365,7 +2369,8 @@ if(SNOW_SHOT_BUILD_TESTS)
     add_executable(snow-shot-global-mouse-tests tests/global_mouse_tests.cpp
         ${SNOW_SHOT_GLOBAL_SHORTCUT_SOURCES}
         src/presentation/capture/screenshotglobalmousedrag.cpp)
-    target_link_libraries(snow-shot-global-mouse-tests PRIVATE snow_shot_global_mouse Qt6::Widgets)
+    target_link_libraries(snow-shot-global-mouse-tests PRIVATE snow_shot_global_mouse Qt6::Widgets
+        Qt6::DBus)
     if(APPLE)
         target_link_libraries(snow-shot-global-mouse-tests PRIVATE
             "${SNOW_SHOT_CARBON_FRAMEWORK}"
@@ -3760,7 +3765,8 @@ if(SNOW_SHOT_BUILD_TESTS)
         src/presentation/services/languagemanager.cpp)
     target_include_directories(snow-shot-window-group-switcher-tests PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/include" "${SNOW_SHOT_DRAW_ENGINE_QT_DIR}/include")
-    target_link_libraries(snow-shot-window-group-switcher-tests PRIVATE snow_shot_global_mouse ant_design_qt Qt6::Widgets)
+    target_link_libraries(snow-shot-window-group-switcher-tests PRIVATE snow_shot_global_mouse
+        ant_design_qt Qt6::Widgets Qt6::DBus)
     if(APPLE)
         set_source_files_properties(tests/window_group_switcher_tests.cpp PROPERTIES LANGUAGE OBJCXX)
         target_link_libraries(snow-shot-window-group-switcher-tests PRIVATE

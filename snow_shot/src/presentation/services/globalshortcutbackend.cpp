@@ -37,6 +37,13 @@ std::unique_ptr<GlobalShortcutBackend> createPlatformGlobalShortcutBackend() {
     return createWindowsGlobalShortcutBackend();
 #elif defined(Q_OS_MACOS)
     return createMacOSGlobalShortcutBackend();
+#elif defined(Q_OS_UNIX)
+    // The portal (xdg-desktop-portal GlobalShortcuts, backed by kglobalaccel on
+    // KDE) is the supported global hotkey path on Wayland.
+    if (auto portal = createPortalGlobalShortcutBackend(); portal != nullptr) {
+        return portal;
+    }
+    return std::make_unique<UnsupportedGlobalShortcutBackend>();
 #else
     return std::make_unique<UnsupportedGlobalShortcutBackend>();
 #endif
