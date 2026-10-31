@@ -1,0 +1,73 @@
+signal time=1793426378.370962 sender=org.freedesktop.DBus -> destination=:1.650 serial=4294967295 path=/org/freedesktop/DBus; interface=org.freedesktop.DBus; member=NameAcquired
+   string ":1.650"
+signal time=1793426378.370998 sender=org.freedesktop.DBus -> destination=:1.650 serial=4294967295 path=/org/freedesktop/DBus; interface=org.freedesktop.DBus; member=NameLost
+   string ":1.650"
+signal time=1793426381.599060 sender=:1.40 -> destination=:1.651 serial=372010 path=/org/freedesktop/portal/desktop/request/1_651/snow_shot_token_1; interface=org.freedesktop.portal.Request; member=Response
+   uint32 0
+   array [
+      dict entry(
+         string "session_handle"
+         variant             string "/org/freedesktop/portal/desktop/session/1_651/snow_shot"
+      )
+   ]
+signal time=1793426382.318440 sender=:1.40 -> destination=:1.651 serial=372017 path=/org/freedesktop/portal/desktop/request/1_651/snow_shot_token_2; interface=org.freedesktop.portal.Request; member=Response
+   uint32 0
+   array [
+      dict entry(
+         string "shortcuts"
+         variant             array [
+               struct {
+                  string "snow-shot-8704"
+                  array [
+                     dict entry(
+                        string "description"
+                        variant                            string "F1"
+                     )
+                     dict entry(
+                        string "trigger_description"
+                        variant                            string ""
+                     )
+                  ]
+               }
+               struct {
+                  string "snow-shot-8705"
+                  array [
+                     dict entry(
+                        string "description"
+                        variant                            string "Ctrl+F1"
+                     )
+                     dict entry(
+                        string "trigger_description"
+                        variant                            string ""
+                     )
+                  ]
+               }
+               struct {
+                  string "snow-shot-8706"
+                  array [
+                     dict entry(
+                        string "description"
+                        variant                            string "F3"
+                     )
+                     dict entry(
+                        string "trigger_description"
+                        variant                            string ""
+                     )
+                  ]
+               }
+               struct {
+                  string "snow-shot-8707"
+                  array [
+                     dict entry(
+                        string "description"
+                        variant                            string "Ctrl+F3"
+                     )
+                     dict entry(
+                        string "trigger_description"
+                        variant                            string ""
+                     )
+                  ]
+               }
+            ]
+      )
+   ]
