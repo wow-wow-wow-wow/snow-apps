@@ -170,6 +170,41 @@ void ScreenshotCaptureWorker::capture(const ScreenshotCaptureRequest& request,
     ScreenshotCaptureResult captureResult;
     captureResult.requestId = request.requestId;
     captureResult.purpose = request.purpose;
+
+    // KWin ScreenShot2 capture for Linux/KDE Wayland. This runs BEFORE any
+    // other capture path to guarantee a working screenshot on KDE.
+    qWarning() << "[capture] attempting KWin ScreenShot2 capture";
+    {
+        const auto screens = QGuiApplication::screens();
+        for (QScreen* screen : screens) {
+            QImage captured = KWinScreenShotCapture::captureScreen(*screen);
+            qWarning() << "[capture] KWin screen" << screen->name()
+                       << "captured=" << !captured.isNull();
+            if (captured.isNull()) {
+                continue;
+            }
+            CapturedDisplayModel display;
+            display.stableId = screen->name();
+            display.name = screen->name();
+            display.physicalRect = screen->geometry();
+            display.canvasRect = screen->geometry();
+            display.image = std::move(captured);
+            display.active = true;
+            display.primary = screen == QGuiApplication::primaryScreen();
+            display.logicalToPhysicalScale = screen->devicePixelRatio();
+            display.backingScale = screen->devicePixelRatio();
+            display.geometryResolved = true;
+            captureResult.displays.push_back(std::move(display));
+        }
+        if (!captureResult.displays.isEmpty()) {
+            captureResult.succeeded = true;
+            qWarning() << "[capture] KWin capture succeeded with"
+                       << captureResult.displays.size() << "displays";
+            postCaptureResult(coordinator, std::move(captureResult));
+            return;
+        }
+        qWarning() << "[capture] KWin capture failed on all screens, falling through";
+    }
     if (!ensureSession(request.excludedWindowIds)) {
         captureResult.errorMessage = nativeCaptureError("Failed to create desktop capture session");
         postCaptureResult(coordinator, std::move(captureResult));
@@ -244,12 +279,8 @@ void ScreenshotCaptureWorker::capture(const ScreenshotCaptureRequest& request,
             Qt::QueuedConnection);
     }
 
-#if defined(__linux__)
-    // Linux capture path: the Rust snow-capture backend is not wired yet
-    // (P3-T1). Use KWin ScreenShot2 (Spectacle's KDE Wayland capture path)
-    // to produce the desktop image, then feed it into the same pipeline.
+    qWarning() << "[capture] reached KWin capture block";
     {
-        qWarning() << "[capture] LINUX BLOCK entered, screens=" << QGuiApplication::screens().size();
         const auto screens = QGuiApplication::screens();
         for (QScreen* screen : screens) {
             QImage captured = KWinScreenShotCapture::captureScreen(*screen);
@@ -280,7 +311,6 @@ void ScreenshotCaptureWorker::capture(const ScreenshotCaptureRequest& request,
         postCaptureResult(coordinator, std::move(captureResult));
         return;
     }
-#endif
 
     SnowCaptureScreenshotRequest nativeRequest{};
     nativeRequest.version = SNOW_CAPTURE_SCREENSHOT_REQUEST_VERSION;

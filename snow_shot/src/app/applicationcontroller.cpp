@@ -1844,6 +1844,7 @@ class ApplicationController::Impl {
 
     void dispatchQuickAction(presentation::GlobalShortcutAction action,
                              QuickActionOrigin origin = QuickActionOrigin::Other) {
+        qWarning() << "[dispatch] entry action=" << int(action) << "origin=" << int(origin);
         runtime::RuntimeActivityTracker::shared().markActivity();
         if (storage::ApplicationStorage::instance().directoryChanging() ||
             (updates && updates->handoffPending()))
@@ -1869,8 +1870,12 @@ class ApplicationController::Impl {
             return;
         switch (action) {
         case presentation::GlobalShortcutAction::Screenshot:
+            qWarning() << "[dispatch] Screenshot case hit";
             if (ScreenshotController* controller = ensureScreenshotController()) {
+                qWarning() << "[dispatch] calling startCapture";
                 controller->startCapture();
+            } else {
+                qWarning() << "[dispatch] ensureScreenshotController FAILED";
             }
             break;
         case presentation::GlobalShortcutAction::ScreenshotDelay:
@@ -2291,6 +2296,12 @@ void ApplicationController::handleLaunchRequest(const QStringList& arguments) {
     if (storage::ApplicationStorage::instance().directoryChanging())
         return;
     if (arguments.contains(QStringLiteral("--autostart"))) {
+        return;
+    }
+    // Wayland cannot monitor global keys; the desktop environment binds the
+    // key to `snow_shot --capture` and the running instance handles it here.
+    if (arguments.contains(QStringLiteral("--capture"))) {
+        m_impl->dispatchQuickAction(presentation::GlobalShortcutAction::Screenshot);
         return;
     }
 #ifdef Q_OS_WIN
