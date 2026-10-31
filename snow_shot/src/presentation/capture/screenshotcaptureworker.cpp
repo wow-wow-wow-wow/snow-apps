@@ -243,30 +243,11 @@ void ScreenshotCaptureWorker::capture(const ScreenshotCaptureRequest& request,
             Qt::QueuedConnection);
     }
 
-    SnowCaptureScreenshotRequest nativeRequest{};
-    nativeRequest.version = SNOW_CAPTURE_SCREENSHOT_REQUEST_VERSION;
-    nativeRequest.struct_size = sizeof(nativeRequest);
-    nativeRequest.flags =
-        request.refreshLayout && !layout ? SNOW_CAPTURE_SCREENSHOT_REQUEST_REFRESH_LAYOUT : 0;
-    if (request.restoreOriginalScreenColors) {
-        nativeRequest.flags |= SNOW_CAPTURE_SCREENSHOT_REQUEST_RESTORE_ORIGINAL_COLORS;
-    }
-    nativeRequest.cancellation_token = cancellationToken;
-
-    SnowCaptureScreenshotResult* nativeResult = nullptr;
+#ifdef Q_OS_LINUX
+    // Linux capture path: the Rust snow-capture backend is not wired yet
+    // (P3-T1). Use KWin ScreenShot2 (Spectacle's KDE Wayland capture path)
+    // to produce the desktop image, then feed it into the same pipeline.
     {
-        SNOW_SHOT_CAPTURE_PERF_SCOPE("capture.native_ffi");
-        nativeResult = layout ? snow_capture_desktop_session_capture_with_layout(
-                                    m_session, &nativeRequest, layout.get())
-                              : snow_capture_desktop_session_capture(m_session, &nativeRequest);
-    }
-    SNOW_SHOT_CAPTURE_PERF_MILESTONE("capture.native_returned");
-#ifndef Q_OS_WIN
-    if (nativeResult == nullptr) {
-        // Linux fallback: the Rust capture backend is not wired yet, but
-        // KWin's ScreenShot2 DBus API is the KDE-native capture path
-        // (Spectacle uses it on Wayland). Build display entries from QScreen
-        // captures and feed them into the same pipeline.
         const auto screens = QGuiApplication::screens();
         for (QScreen* screen : screens) {
             QImage captured = KWinScreenShotCapture::captureScreen(*screen);
@@ -293,11 +274,30 @@ void ScreenshotCaptureWorker::capture(const ScreenshotCaptureRequest& request,
             return;
         }
         captureResult.succeeded = true;
-        SNOW_SHOT_CAPTURE_PERF_MILESTONE("capture.kwin_fallback_done");
+        SNOW_SHOT_CAPTURE_PERF_MILESTONE("capture.kwin_done");
         postCaptureResult(coordinator, std::move(captureResult));
         return;
     }
 #endif
+
+    SnowCaptureScreenshotRequest nativeRequest{};
+    nativeRequest.version = SNOW_CAPTURE_SCREENSHOT_REQUEST_VERSION;
+    nativeRequest.struct_size = sizeof(nativeRequest);
+    nativeRequest.flags =
+        request.refreshLayout && !layout ? SNOW_CAPTURE_SCREENSHOT_REQUEST_REFRESH_LAYOUT : 0;
+    if (request.restoreOriginalScreenColors) {
+        nativeRequest.flags |= SNOW_CAPTURE_SCREENSHOT_REQUEST_RESTORE_ORIGINAL_COLORS;
+    }
+    nativeRequest.cancellation_token = cancellationToken;
+
+    SnowCaptureScreenshotResult* nativeResult = nullptr;
+    {
+        SNOW_SHOT_CAPTURE_PERF_SCOPE("capture.native_ffi");
+        nativeResult = layout ? snow_capture_desktop_session_capture_with_layout(
+                                    m_session, &nativeRequest, layout.get())
+                              : snow_capture_desktop_session_capture(m_session, &nativeRequest);
+    }
+    SNOW_SHOT_CAPTURE_PERF_MILESTONE("capture.native_returned");
     if (nativeResult == nullptr) {
         const QString captureError = nativeCaptureError("Screenshot capture failed");
         static_cast<void>(snow_capture_desktop_session_reset_to_prepared(m_session));
