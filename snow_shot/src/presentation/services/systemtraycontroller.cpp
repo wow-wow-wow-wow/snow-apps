@@ -416,6 +416,15 @@ class SystemTrayController::Impl {
         trayIcon->setObjectName(QStringLiteral("snowShotSystemTrayIcon"));
         trayIcon->setToolTip(app::edition::isMini ? app::edition::productName()
                                                   : QStringLiteral("SnowShot"));
+#ifndef Q_OS_MACOS
+        // Wayland xdg_popup requires a mapped transient parent, and in
+        // tray-only mode the application has no other window. A 1x1
+        // translucent tool window serves as the popup anchor.
+        popupAnchor_ = new QWidget(nullptr, Qt::Tool | Qt::FramelessWindowHint);
+        popupAnchor_->setAttribute(Qt::WA_TranslucentBackground);
+        popupAnchor_->setFixedSize(1, 1);
+        popupAnchor_->show();
+#endif
 #ifdef Q_OS_MACOS
         notifications = std::make_unique<platform::macos::SystemNotificationService>(&q);
         using NotificationService = platform::macos::SystemNotificationService;
@@ -462,16 +471,6 @@ class SystemTrayController::Impl {
 
         setMenuOptions({});
 
-#ifndef Q_OS_MACOS
-        // StatusNotifierItem hosts render the context menu from the exported
-        // DBusMenu, so the menu must exist ahead of the first right-click and
-        // outlive being hidden (no delete-on-hide on Linux).
-        if (menu) {
-            menu->setDeleteOnHide(false);
-            trayIcon->setContextMenu(menu);
-        }
-#endif
-
         // Cocoa opens an attached menu on left-click too. Handle Context explicitly there.
         QObject::connect(trayIcon, &QSystemTrayIcon::activated, &q,
                          [this](QSystemTrayIcon::ActivationReason reason) {
@@ -489,17 +488,19 @@ class SystemTrayController::Impl {
                              } else if (reason == QSystemTrayIcon::Context) {
                                  if (menu && menu->isPopupVisible())
                                      return;
-                                 // StatusNotifierItem hosts (Plasma, GNOME's
-                                 // AppIndicator) show the attached menu through the
-                                 // exported DBusMenu; a second manual popup would duplicate it.
-                                 if (trayIcon->contextMenu() != nullptr)
-                                     return;
                                  auto* popup = createMenu();
 #ifdef Q_OS_MACOS
                                  platform::macos::showSystemTrayMenu(trayIcon, popup);
 #else
-                                 popup->popupAt(
-                                     systemTrayMenuPosition(trayIcon->geometry(), QCursor::pos()));
+                                 // On Wayland trayIcon->geometry() is unreliable;
+                                 // a Context activation corresponds to the user's
+                                 // click position. xdg_popup also needs a mapped
+                                 // transient parent, which the tray-only mode has
+                                 // none of, hence the anchor window.
+                                 if (popupAnchor_ != nullptr) {
+                                     popup->setParent(popupAnchor_, Qt::Popup);
+                                 }
+                                 popup->popupAt(QCursor::pos());
 #endif
                              }
                          });
@@ -530,6 +531,10 @@ class SystemTrayController::Impl {
         trayIcon->setContextMenu(nullptr);
         for (const auto& popup : menus)
             delete popup.data();
+#ifndef Q_OS_MACOS
+        delete popupAnchor_;
+        popupAnchor_ = nullptr;
+#endif
     }
 
     adqt::widgets::AdContextMenu* createMenu() {
@@ -538,7 +543,14 @@ class SystemTrayController::Impl {
         menu = new adqt::widgets::AdContextMenu;
         menus.removeIf([](const auto& popup) { return popup.isNull(); });
         menus.append(menu);
+#ifndef Q_OS_MACOS
+        // The attached menu outlives hide events on Linux so its DBusMenu
+        // export stays valid for StatusNotifierItem hosts.
+        menu->setDeleteOnHide(false);
+        trayIcon->setContextMenu(menu);
+#else
         menu->setDeleteOnHide();
+#endif
         menu->setObjectName(QStringLiteral("systemTrayMenu"));
         menu->setMinimumWidth(300);
         new TrayMenuSkinBinding(menu);
@@ -894,6 +906,7 @@ class SystemTrayController::Impl {
     QPointer<adqt::widgets::AdContextMenu> menu;
     QList<QPointer<adqt::widgets::AdContextMenu>> menus;
     QSystemTrayIcon* trayIcon = nullptr;
+    QWidget* popupAnchor_ = nullptr;
 #ifdef Q_OS_MACOS
     std::unique_ptr<platform::macos::SystemNotificationService> notifications;
 #endif
