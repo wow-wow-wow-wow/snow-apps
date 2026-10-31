@@ -2162,6 +2162,7 @@ target_link_libraries(snow_shot PRIVATE
     snow_shot_memory_optimization
     snow_shot_crash_bridge
     snow_shot_image_codec
+    Qt6::DBus
     MINIZIP::minizip-ng
 )
 include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/SnowShotUpdates.cmake")
