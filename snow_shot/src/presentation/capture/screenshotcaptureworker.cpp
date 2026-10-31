@@ -166,6 +166,7 @@ void ScreenshotCaptureWorker::capture(const ScreenshotCaptureRequest& request,
                                       const QPointer<ScreenshotCaptureCoordinator>& coordinator,
                                       SnowCaptureCancellationToken* cancellationToken) {
     SNOW_SHOT_CAPTURE_PERF_MILESTONE("capture.worker_entry");
+    qWarning() << "[capture] worker_entry, purpose=" << int(request.purpose);
     ScreenshotCaptureResult captureResult;
     captureResult.requestId = request.requestId;
     captureResult.purpose = request.purpose;
@@ -243,11 +244,12 @@ void ScreenshotCaptureWorker::capture(const ScreenshotCaptureRequest& request,
             Qt::QueuedConnection);
     }
 
-#ifdef Q_OS_LINUX
+#if defined(__linux__)
     // Linux capture path: the Rust snow-capture backend is not wired yet
     // (P3-T1). Use KWin ScreenShot2 (Spectacle's KDE Wayland capture path)
     // to produce the desktop image, then feed it into the same pipeline.
     {
+        qWarning() << "[capture] LINUX BLOCK entered, screens=" << QGuiApplication::screens().size();
         const auto screens = QGuiApplication::screens();
         for (QScreen* screen : screens) {
             QImage captured = KWinScreenShotCapture::captureScreen(*screen);
