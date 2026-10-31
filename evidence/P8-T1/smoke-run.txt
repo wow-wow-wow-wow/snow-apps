@@ -1,0 +1,6 @@
+启动冒烟验证(2026-10-31 04:33-05:00, 真实 KDE Wayland 会话):
+- 应用实例自 04:33 起持续运行: PID 2071, exe = build/linux-appdir/usr/bin/snow_shot --autostart
+- XDG autostart 条目已存在(~/.config/autostart/snow_shot.desktop, 指向 AppDir 二进制) —— P2-T4 的 autostart 注册生效
+- 再次启动返回 0 且立即退出 = 单实例(QLocalServer)握手正常, 不产生第二实例
+- RSS 122492 KB(debug 构建, 未优化; B1 预算 80MB 按 release 评定, 此值仅供参考)
+- 结论: "进程不崩溃、可常驻"在真实会话成立; "主窗口可见/交互"为【VM】项留给真人

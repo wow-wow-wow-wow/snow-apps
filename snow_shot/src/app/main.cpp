@@ -191,6 +191,9 @@ int main(int argc, char* argv[]) {
     }
     QCoreApplication::setApplicationName(applicationName);
     QCoreApplication::setApplicationVersion(QStringLiteral(SNOW_DIAGNOSTICS_VERSION));
+    // Attributes the app to the snow_shot.desktop entry so KDE shows the right
+    // name and icon in portal dialogs (global shortcuts) and the tray.
+    QGuiApplication::setDesktopFileName(QStringLiteral("snow_shot"));
 #ifdef SNOW_SHOT_CONTROLLER_LIFETIME_TESTS
     if (argc == 2 && QString::fromLocal8Bit(argv[1]) == u"--controller-lifetime-tests") {
         return runScreenshotControllerLifetimeTests(argc, argv);
