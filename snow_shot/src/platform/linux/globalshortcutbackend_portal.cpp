@@ -24,6 +24,28 @@ const QString kPortalInterface = QStringLiteral("org.freedesktop.portal.GlobalSh
 const QString kRequestInterface = QStringLiteral("org.freedesktop.portal.Request");
 const QString kSessionInterface = QStringLiteral("org.freedesktop.portal.Session");
 
+// Reads the "a{sv}" argument of a portal Response. Slots taking QDBusMessage
+// receive undecoded payloads, so the map must be unpacked manually.
+QVariantMap responseResults(const QDBusMessage& message) {
+    QVariantMap results;
+    if (message.arguments().size() < 2 ||
+        !message.arguments().at(1).canConvert<QDBusArgument>()) {
+        return results;
+    }
+    const QDBusArgument argument = message.arguments().at(1).value<QDBusArgument>();
+    argument.beginMap();
+    while (!argument.atEnd()) {
+        QString key;
+        QVariant value;
+        argument.beginMapEntry();
+        argument >> key >> value;
+        argument.endMapEntry();
+        results.insert(key, value);
+    }
+    argument.endMap();
+    return results;
+}
+
 // The GlobalShortcuts portal (version 2) describes every shortcut as
 // (id, properties) with "description" and "preferred_binding" string keys.
 using PortalShortcut = QPair<QString, QVariantMap>;
@@ -50,13 +72,18 @@ const QDBusArgument& operator>>(const QDBusArgument& argument, PortalShortcut& s
 namespace {
 
 class PortalGlobalShortcutBackend final : public QObject, public GlobalShortcutBackend {
+    Q_OBJECT
+
   public:
     explicit PortalGlobalShortcutBackend(QObject* parent = nullptr) : QObject(parent) {
         qDBusRegisterMetaType<PortalShortcut>();
         qDBusRegisterMetaType<QList<PortalShortcut>>();
-        rebindTimer_.setSingleShot(true);
-        connect(&rebindTimer_, &QTimer::timeout, this,
+        bindTimer_.setSingleShot(true);
+        connect(&bindTimer_, &QTimer::timeout, this,
                 &PortalGlobalShortcutBackend::bindShortcuts);
+        cooldownTimer_.setSingleShot(true);
+        connect(&cooldownTimer_, &QTimer::timeout, this,
+                &PortalGlobalShortcutBackend::endCooldown);
     }
 
     ~PortalGlobalShortcutBackend() override { teardownSession(); }
@@ -88,6 +115,9 @@ class PortalGlobalShortcutBackend final : public QObject, public GlobalShortcutB
     // registrations through availabilityChanged, which drives reconcile().
     GlobalShortcutBackendResult registerShortcut(int registrationId,
                                                  const shortcuts::ShortcutBinding& binding) override {
+        if (cooldownTimer_.isActive()) {
+            return {false, GlobalShortcutFailureReason::SystemError, 0};
+        }
         if (binding.portableText.isEmpty() ||
             QKeySequence(binding.portableText, QKeySequence::PortableText).count() == 0) {
             return {false, GlobalShortcutFailureReason::InvalidShortcut, 0};
@@ -116,6 +146,8 @@ class PortalGlobalShortcutBackend final : public QObject, public GlobalShortcutB
     }
 
     void scheduleBind() {
+        qWarning().nospace() << "[portal] scheduleBind phase=" << int(phase_)
+                             << " pending=" << pending_.size();
         switch (phase_) {
         case Phase::Idle:
             createSession();
@@ -124,7 +156,10 @@ class PortalGlobalShortcutBackend final : public QObject, public GlobalShortcutB
             if (binding_) {
                 rebindRequested_ = true;
             } else {
-                bindShortcuts();
+                // Debounce: the manager registers shortcuts one at a time, and
+                // every BindShortcuts call can raise a desktop-environment
+                // dialog. Batch the queue instead of binding per call.
+                bindTimer_.start(300);
             }
             break;
         case Phase::Creating:
@@ -153,46 +188,53 @@ class PortalGlobalShortcutBackend final : public QObject, public GlobalShortcutB
                 &PortalGlobalShortcutBackend::createSessionFinished);
     }
 
+    // CreateSession returns the REQUEST path; the session handle itself only
+    // arrives in the request's Response results, handled in portalResponse().
     void createSessionFinished(QDBusPendingCallWatcher* watcher) {
         watcher->deleteLater();
         if (phase_ != Phase::Creating) {
             return;
         }
         const QDBusPendingReply<QDBusObjectPath> reply = *watcher;
+        qWarning().nospace() << "[portal] create reply error=" << reply.isError()
+                             << (reply.isError() ? reply.error().message() : QString());
         if (reply.isError()) {
             invalidateAll();
-            return;
-        }
-        sessionPath_ = reply.value().path();
-        QDBusConnection bus = QDBusConnection::sessionBus();
-        bus.connect(kPortalService, sessionPath_, kSessionInterface,
-                    QStringLiteral("Closed"), this, SLOT(sessionClosed()));
-        bus.connect(kPortalService, sessionPath_, kPortalInterface,
-                    QStringLiteral("Activated"), this,
-                    SLOT(shortcutActivated(QDBusMessage)));
-        phase_ = Phase::Ready;
-        if (bindQueued_ || !pending_.isEmpty()) {
-            bindQueued_ = false;
-            bindShortcuts();
         }
     }
 
     // Portal requests answer through a Response signal on a predictable object
     // path derived from the unique bus name and the handle_token option.
     void watchRequest(const QString& token) {
-        QString sender = QDBusConnection::sessionBus().baseService();
+        QDBusConnection bus = QDBusConnection::sessionBus();
+        if (!responsePath_.isEmpty()) {
+            // Requests are strictly sequential; stop listening to the previous one.
+            bus.disconnect(kPortalService, responsePath_, kRequestInterface,
+                           QStringLiteral("Response"), this,
+                           SLOT(portalResponse(QDBusMessage)));
+        }
+        QString sender = bus.baseService();
         if (sender.startsWith(QLatin1Char(':'))) {
             sender.remove(0, 1);
         }
         sender.replace(QLatin1Char('.'), QLatin1Char('_'));
         responsePath_ = QStringLiteral("/org/freedesktop/portal/desktop/request/%1/%2")
                             .arg(sender, token);
-        QDBusConnection::sessionBus().connect(kPortalService, responsePath_, kRequestInterface,
-                                              QStringLiteral("Response"), this,
-                                              SLOT(portalResponse(QDBusMessage)));
+        const bool exact = bus.connect(kPortalService, responsePath_, kRequestInterface,
+                                       QStringLiteral("Response"), this,
+                                       SLOT(portalResponse(QDBusMessage)));
+        // Some portals emit the Response from an unexpected path; subscribe to
+        // the interface without a path filter as a belt-and-braces fallback.
+        const bool anyPath = bus.connect(kPortalService, QString(), kRequestInterface,
+                                         QStringLiteral("Response"), this,
+                                         SLOT(portalResponse(QDBusMessage)));
+        qWarning().nospace() << "[portal] watch " << responsePath_ << " exact=" << exact
+                             << " anyPath=" << anyPath;
     }
 
     void bindShortcuts() {
+        qWarning().nospace() << "[portal] bind phase=" << int(phase_)
+                             << " session=" << sessionPath_ << " pending=" << pending_.size();
         if (phase_ != Phase::Ready || sessionPath_.isEmpty()) {
             return;
         }
@@ -234,43 +276,25 @@ class PortalGlobalShortcutBackend final : public QObject, public GlobalShortcutB
         });
     }
 
-    void portalResponse(QDBusMessage message) {
-        if (message.arguments().isEmpty()) {
-            return;
-        }
-        const quint32 response = message.arguments().first().toUInt();
-        if (response != 0) {
-            // 1 = the user dismissed the dialog, 2 = other error.
-            invalidateAll();
-            return;
-        }
-        if (phase_ != Phase::Ready) {
-            // CreateSession completion is owned by the call watcher.
-            return;
-        }
-        for (auto it = pending_.cbegin(); it != pending_.cend(); ++it) {
-            bound_.insert(it.key(), it.value());
-        }
-        pending_.clear();
-        if (rebindRequested_) {
-            rebindRequested_ = false;
-            bindShortcuts();
-        }
-    }
-
     void invalidateAll() {
         const QList<int> invalidated = pending_.keys() + bound_.keys();
         pending_.clear();
         bound_.clear();
         teardownSession();
+        ++consecutiveFailures_;
+        if (consecutiveFailures_ >= 3) {
+            // A missing or rejecting portal must not spin the register loop.
+            cooldownTimer_.start(60 * 1000);
+        }
         if (!invalidated.isEmpty() && availabilityChanged_ != nullptr) {
             availabilityChanged_(invalidated);
         }
     }
 
     void scheduleRebind() {
-        if (!rebindTimer_.isActive()) {
-            rebindTimer_.start(500);
+        rebindRequested_ = true;
+        if (!bindTimer_.isActive()) {
+            bindTimer_.start(500);
         }
     }
 
@@ -295,7 +319,59 @@ class PortalGlobalShortcutBackend final : public QObject, public GlobalShortcutB
     }
 
   private Q_SLOTS:
+    void portalResponse(QDBusMessage message) {
+        if (message.arguments().size() < 2) {
+            return;
+        }
+        const quint32 response = message.arguments().first().toUInt();
+        const QVariantMap results = responseResults(message);
+        if (phase_ == Phase::Creating) {
+            if (response != 0) {
+                invalidateAll();
+                return;
+            }
+            const QVariant handle = results.value(QStringLiteral("session_handle"));
+            sessionPath_ = handle.canConvert<QDBusObjectPath>()
+                               ? handle.value<QDBusObjectPath>().path()
+                               : handle.toString();
+            if (sessionPath_.isEmpty()) {
+                invalidateAll();
+                return;
+            }
+            QDBusConnection bus = QDBusConnection::sessionBus();
+            bus.connect(kPortalService, sessionPath_, kSessionInterface,
+                        QStringLiteral("Closed"), this, SLOT(sessionClosed()));
+            bus.connect(kPortalService, sessionPath_, kPortalInterface,
+                        QStringLiteral("Activated"), this,
+                        SLOT(shortcutActivated(QDBusMessage)));
+            phase_ = Phase::Ready;
+            consecutiveFailures_ = 0;
+            if (bindQueued_ || !pending_.isEmpty()) {
+                bindQueued_ = false;
+                bindShortcuts();
+            }
+            return;
+        }
+        if (phase_ != Phase::Ready || response != 0) {
+            // 1 = the user dismissed the dialog, 2 = other error.
+            if (response != 0) {
+                invalidateAll();
+            }
+            return;
+        }
+        for (auto it = pending_.cbegin(); it != pending_.cend(); ++it) {
+            bound_.insert(it.key(), it.value());
+        }
+        pending_.clear();
+        consecutiveFailures_ = 0;
+        if (rebindRequested_) {
+            rebindRequested_ = false;
+            bindShortcuts();
+        }
+    }
     void sessionClosed() { invalidateAll(); }
+
+    void endCooldown() { consecutiveFailures_ = 0; }
 
     void shortcutActivated(const QDBusMessage& message) {
         if (activationHandler_ == nullptr || message.arguments().size() < 2) {
@@ -321,7 +397,9 @@ class PortalGlobalShortcutBackend final : public QObject, public GlobalShortcutB
     bool binding_ = false;
     bool bindQueued_ = false;
     bool rebindRequested_ = false;
-    QTimer rebindTimer_{this};
+    int consecutiveFailures_ = 0;
+    QTimer bindTimer_{this};
+    QTimer cooldownTimer_{this};
 };
 
 } // namespace
@@ -336,3 +414,5 @@ std::unique_ptr<GlobalShortcutBackend> createPortalGlobalShortcutBackend() {
 }
 
 } // namespace snow_shot::presentation
+
+#include "globalshortcutbackend_portal.moc"
