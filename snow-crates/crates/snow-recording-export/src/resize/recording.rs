@@ -292,7 +292,7 @@ impl AreaResizePlan {
                 }
             }
             for (pixel, sums) in output[columns.start * 4..columns.end * 4]
-                .chunks_exact_mut(4)
+                .as_chunks_mut::<4>().0.iter_mut()
                 .zip(&workspace.vertical)
             {
                 for (channel, &sum) in pixel.iter_mut().zip(sums) {
@@ -365,8 +365,8 @@ impl AreaResizePlan {
             if u64::from(self.x.denominator) <= u64::from(u32::MAX) / 256 {
                 let mut red_blue = 0_u64;
                 let mut green_alpha = 0_u64;
-                for (pixel, &wx) in pixels.chunks_exact(4).zip(x_weights) {
-                    let pixel = u64::from(u32::from_le_bytes(pixel.try_into().unwrap()));
+                for (pixel, &wx) in pixels.as_chunks::<4>().0.iter().zip(x_weights) {
+                    let pixel = u64::from(u32::from_le_bytes(*pixel));
                     let weight = u64::from(wx);
                     red_blue += ((pixel & 255) | ((pixel & 0x00ff_0000) << 16)) * weight;
                     green_alpha += ((pixel >> 8 & 255) | ((pixel >> 24) << 32)) * weight;
@@ -380,7 +380,7 @@ impl AreaResizePlan {
                 continue;
             }
             sum.fill(0);
-            for (pixel, &weight) in pixels.chunks_exact(4).zip(x_weights) {
+            for (pixel, &weight) in pixels.as_chunks::<4>().0.iter().zip(x_weights) {
                 for (sum, &value) in sum.iter_mut().zip(pixel) {
                     *sum += u64::from(value) * u64::from(weight);
                 }
@@ -451,7 +451,7 @@ fn horizontal_narrow(axis: &AxisPlan, row: &[u8], columns: Range<usize>, output:
         let weights = &axis.weights[span.weights.clone()];
         let pixels = &row[span.first * 4..(span.first + weights.len()) * 4];
         sum.fill(0);
-        for (pixel, &weight) in pixels.chunks_exact(4).zip(weights) {
+        for (pixel, &weight) in pixels.as_chunks::<4>().0.iter().zip(weights) {
             for channel in 0..4 {
                 sum[channel] += u32::from(pixel[channel]) * weight;
             }
@@ -470,14 +470,14 @@ fn accumulate_narrow(source: &[[u32; 4]], output: &mut [[u32; 4]], weight: u32) 
 fn write_narrow(source: &[[u32; 4]], output: &mut [u8], denominator: u32, reciprocal: u32) {
     if denominator.is_power_of_two() {
         let shift = denominator.trailing_zeros();
-        for (pixel, sums) in output.chunks_exact_mut(4).zip(source) {
+        for (pixel, sums) in output.as_chunks_mut::<4>().0.iter_mut().zip(source) {
             for (channel, &sum) in pixel.iter_mut().zip(sums) {
                 *channel = ((sum + denominator / 2) >> shift) as u8;
             }
         }
         return;
     }
-    for (pixel, sums) in output.chunks_exact_mut(4).zip(source) {
+    for (pixel, sums) in output.as_chunks_mut::<4>().0.iter_mut().zip(source) {
         for (channel, &sum) in pixel.iter_mut().zip(sums) {
             let numerator = sum + denominator / 2;
             let estimate = ((u64::from(numerator) * u64::from(reciprocal)) >> 32) as u32;
@@ -514,7 +514,7 @@ unsafe fn horizontal_neon(
         let weights = &axis.weights[span.weights.clone()];
         let pixels = &row[span.first * 4..(span.first + weights.len()) * 4];
         let mut sum = vdupq_n_u32(0);
-        for (pixel, &weight) in pixels.chunks_exact(4).zip(weights) {
+        for (pixel, &weight) in pixels.as_chunks::<4>().0.iter().zip(weights) {
             let bytes = vcreate_u8(u64::from(u32::from_le_bytes(pixel.try_into().unwrap())));
             let rgba = vmovl_u16(vget_low_u16(vmovl_u8(bytes)));
             sum = vmlaq_n_u32(sum, rgba, weight);
@@ -572,7 +572,7 @@ unsafe fn write_neon(source: &[[u32; 4]], output: &mut [u8], denominator: u32, r
     use std::arch::aarch64::*;
     let half = vdupq_n_u32(denominator / 2);
     let shift = vdupq_n_s32(-(denominator.trailing_zeros() as i32));
-    for (sum, pixel) in source.iter().zip(output.chunks_exact_mut(4)) {
+    for (sum, pixel) in source.iter().zip(output.as_chunks_mut::<4>().0.iter_mut()) {
         // SAFETY: each source contains four initialized u32 channels.
         let numerator = vaddq_u32(unsafe { vld1q_u32(sum.as_ptr()) }, half);
         let rounded = if denominator.is_power_of_two() {
@@ -621,8 +621,8 @@ unsafe fn horizontal_sse41(
         let weights = &axis.weights[span.weights.clone()];
         let pixels = &row[span.first * 4..(span.first + weights.len()) * 4];
         let mut sum = _mm_setzero_si128();
-        for (pixel, &weight) in pixels.chunks_exact(4).zip(weights) {
-            let pixel = u32::from_le_bytes(pixel.try_into().unwrap());
+        for (pixel, &weight) in pixels.as_chunks::<4>().0.iter().zip(weights) {
+            let pixel = u32::from_le_bytes(*pixel);
             let rgba = _mm_cvtepu8_epi32(_mm_cvtsi32_si128(pixel as i32));
             sum = _mm_add_epi32(sum, _mm_mullo_epi32(rgba, _mm_set1_epi32(weight as i32)));
         }
@@ -689,7 +689,7 @@ unsafe fn write_sse41(source: &[[u32; 4]], output: &mut [u8], denominator: u32, 
     let zero = _mm_setzero_si128();
     if denominator.is_power_of_two() {
         let shift = _mm_cvtsi32_si128(denominator.trailing_zeros() as i32);
-        for (sum, pixel) in source.iter().zip(output.chunks_exact_mut(4)) {
+        for (sum, pixel) in source.iter().zip(output.as_chunks_mut::<4>().0.iter_mut()) {
             // SAFETY: every source array owns sixteen initialized bytes.
             let sum = unsafe { _mm_loadu_si128(sum.as_ptr().cast()) };
             let rounded = _mm_srl_epi32(_mm_add_epi32(sum, half), shift);
@@ -701,7 +701,7 @@ unsafe fn write_sse41(source: &[[u32; 4]], output: &mut [u8], denominator: u32, 
     let reciprocal = _mm_set1_epi32(reciprocal as i32);
     let denominator = _mm_set1_epi32(denominator as i32);
     let sign = _mm_set1_epi32(i32::MIN);
-    for (sum, pixel) in source.iter().zip(output.chunks_exact_mut(4)) {
+    for (sum, pixel) in source.iter().zip(output.as_chunks_mut::<4>().0.iter_mut()) {
         // SAFETY: each source array contains sixteen initialized bytes.
         let sum = unsafe { _mm_loadu_si128(sum.as_ptr().cast()) };
         let numerator = _mm_add_epi32(sum, half);
@@ -727,9 +727,9 @@ unsafe fn write_sse41(source: &[[u32; 4]], output: &mut [u8], denominator: u32, 
 unsafe fn accumulate_avx2(source: &[[u32; 4]], output: &mut [[u32; 4]], weight: u32) {
     use std::arch::x86_64::*;
     let weights = _mm256_set1_epi32(weight as i32);
-    let mut source = source.chunks_exact(2);
-    let mut output = output.chunks_exact_mut(2);
-    for (source, destination) in source.by_ref().zip(output.by_ref()) {
+    let (source_pairs, source_rest) = source.as_chunks::<2>();
+    let (output_pairs, output_rest) = output.as_chunks_mut::<2>();
+    for (source, destination) in source_pairs.iter().zip(output_pairs.iter_mut()) {
         // SAFETY: each two-pixel chunk owns thirty-two bytes. Narrow dispatch
         // bounds every product and sum to its unsigned 32-bit channel lane.
         unsafe {
@@ -743,7 +743,7 @@ unsafe fn accumulate_avx2(source: &[[u32; 4]], output: &mut [[u32; 4]], weight: 
     }
     // SAFETY: feature selection checked SSE4.1 too; the remainder has at most
     // one complete pixel and the same bounded arithmetic contract.
-    unsafe { accumulate_sse41(source.remainder(), output.into_remainder(), weight) };
+    unsafe { accumulate_sse41(source_rest, output_rest, weight) };
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -756,9 +756,9 @@ unsafe fn write_avx2(source: &[[u32; 4]], output: &mut [u8], denominator: u32, r
     let sign = _mm256_set1_epi32(i32::MIN);
     let zero = _mm_setzero_si128();
     let shift = _mm_cvtsi32_si128(denominator.trailing_zeros() as i32);
-    let mut source = source.chunks_exact(2);
-    let mut output = output.chunks_exact_mut(8);
-    for (sums, pixels) in source.by_ref().zip(output.by_ref()) {
+    let (source_sums, source_rest) = source.as_chunks::<2>();
+    let (output_pixels, output_rest) = output.as_chunks_mut::<8>();
+    for (sums, pixels) in source_sums.iter().zip(output_pixels.iter_mut()) {
         // SAFETY: the chunk contains two complete four-channel sum arrays.
         let sums = unsafe { _mm256_loadu_si256(sums.as_ptr().cast()) };
         let numerator = _mm256_add_epi32(sums, half);
@@ -792,8 +792,8 @@ unsafe fn write_avx2(source: &[[u32; 4]], output: &mut [u8], denominator: u32, r
     // one complete pixel, with the same rounding numerator/product bounds.
     unsafe {
         write_sse41(
-            source.remainder(),
-            output.into_remainder(),
+            source_rest,
+            output_rest,
             denominator,
             reciprocal,
         )
@@ -1165,7 +1165,7 @@ mod tests {
                         area_reference(&source, input, output),
                         "cell coverage {input:?}->{output:?}"
                     );
-                    for pixel in actual.chunks_exact(4) {
+                    for pixel in actual.as_chunks::<4>().0.iter() {
                         assert!((20..=66).contains(&pixel[0]));
                         assert!((100..=160).contains(&pixel[1]));
                         assert!((200..=230).contains(&pixel[2]));
@@ -1437,14 +1437,14 @@ mod tests {
                 }
                 let mut output = vec![0; 16];
                 RecordingResizePlan::new(4, 4, 2, 2).resize_into(&source, &mut output);
-                let values: Vec<_> = output.chunks_exact(4).map(|pixel| pixel[0]).collect();
+                let values: Vec<_> = output.as_chunks::<4>().0.iter().map(|pixel| pixel[0]).collect();
                 assert_eq!(values.iter().filter(|&&value| value == 128).count(), 2);
                 assert_eq!(values.iter().filter(|&&value| value == 255).count(), 2);
-                assert!(output.chunks_exact(4).all(|pixel| pixel[3] == 255));
+                assert!(output.as_chunks::<4>().0.iter().all(|pixel| pixel[3] == 255));
                 if position % 2 == 1 {
                     let mut nearest = vec![0; 16];
                     NearestResizePlan::new(4, 4, 2, 2).resize_into(&source, &mut nearest);
-                    assert!(nearest.chunks_exact(4).all(|pixel| pixel[0] == 255));
+                    assert!(nearest.as_chunks::<4>().0.iter().all(|pixel| pixel[0] == 255));
                 }
             }
         }
@@ -1512,8 +1512,8 @@ mod tests {
             plan.resize_into(&source, &mut output);
             assert!(
                 output
-                    .chunks_exact(4)
-                    .all(|pixel| pixel == [12, 57, 203, 149])
+                    .as_chunks::<4>().0.iter()
+                    .all(|pixel| *pixel == [12, 57, 203, 149])
             );
             assert_eq!(output.as_ptr(), pointer);
             assert!(plan.matches(source_size, output_size));

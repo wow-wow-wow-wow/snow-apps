@@ -1636,10 +1636,13 @@ void toolbarSkinProfilesAndLifecycle() {
                     "owned popup windows must retain opaque surfaces outside the toolbar backdrop");
             // The solid button paints an offset shadow beneath its fill. Sample
             // the top interior above that shadow, away from its centered icon.
-            for (const auto& sample :
-                 {std::make_pair(static_cast<QWidget*>(&button), QPoint(20, 1)),
-                  std::make_pair(static_cast<QWidget*>(&radio), QPoint(20, 16)),
-                  std::make_pair(static_cast<QWidget*>(&select), QPoint(48, 16))}) {
+            // Named array: GCC 16's -Wdangling-reference flags the
+            // initializer_list of make_pair temporaries behind a range-for.
+            const std::pair<QWidget*, QPoint> hitSamples[] = {
+                {static_cast<QWidget*>(&button), QPoint(20, 1)},
+                {static_cast<QWidget*>(&radio), QPoint(20, 16)},
+                {static_cast<QWidget*>(&select), QPoint(48, 16)}};
+            for (const auto& sample : hitSamples) {
                 const QImage rendered = renderToolbarWidget(*sample.first);
                 const QColor actual = rendered.pixelColor(sample.second);
                 const int expectedAlpha = qRound(255 * expectedOpacity);

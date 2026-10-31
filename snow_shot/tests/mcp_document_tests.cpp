@@ -323,7 +323,8 @@ int serve(QApplication& application, const QString& directory) {
             QJsonObject values{
                 {QStringLiteral("ticks"), ticks},
                 {QStringLiteral("max_lateness_ms"), latenessMaximum},
-                {QStringLiteral("mean_lateness_ms"), static_cast<double>(latenessTotal) / ticks},
+                {QStringLiteral("mean_lateness_ms"),
+                 static_cast<double>(latenessTotal) / static_cast<double>(ticks)},
                 {QStringLiteral("wall_ms"), elapsed},
                 {QStringLiteral("fixture_pins"), fixturePins},
                 {QStringLiteral("fixture_presentations"), fixturePresentations},

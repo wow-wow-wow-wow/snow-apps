@@ -21,7 +21,7 @@ class PixelMatAllocator final : public cv::MatAllocator {
             return cv::Mat::getStdAllocator()->allocate(dimensions, sizes, type, data, steps, flags,
                                                         usage);
         }
-        std::size_t bytes = CV_ELEM_SIZE(type);
+        std::size_t bytes = static_cast<std::size_t>(CV_ELEM_SIZE(type));
         for (int i = dimensions; i-- > 0;) {
             if (sizes[i] < 0 || (sizes[i] > 0 && bytes > std::numeric_limits<std::size_t>::max() /
                                                              static_cast<std::size_t>(sizes[i]))) {

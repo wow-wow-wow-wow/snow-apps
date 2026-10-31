@@ -46,6 +46,45 @@ namespace {
 constexpr int kToolbarGap = 4;
 namespace auto_hide = snow_shot::presentation::recording::toolbar_auto_hide;
 
+
+ScreenshotToolPalette::Options recordingToolbarOptions() {
+    ScreenshotToolPalette::Options options;
+    options.showDragHandle = true;
+    options.showSelectTool = true;
+    options.showShapeTool = true;
+    options.showSpeechBubbleTool = true;
+    options.showArrowTool = true;
+    options.showLineTool = true;
+    options.showDistanceTool = true;
+    options.showAngleTool = true;
+    options.showFreeDrawTool = true;
+    options.showHighlightTool = true;
+    options.showPenHighlightTool = true;
+    options.showSpotlightTool = true;
+    // Magnifiers sample captured images; recording annotations have no image source.
+    options.showMagnifierTool = false;
+    options.showEraserTool = true;
+    options.showFilterTool = true;
+    options.showWatermarkTool = true;
+    options.showTextTool = true;
+    options.showSerialNumberTool = true;
+    options.showHistoryActions = true;
+    options.showRecordingControls = true;
+    options.recordingDrawingMode = true;
+    options.enableStyleToolbar = true;
+    options.toolbarLayout = snow_shot::storage::ScreenshotToolbarSettings().layout(
+        snow_shot::storage::ScreenshotToolbarLayoutKind::DrawingTools);
+    options.actionToolsLayoutKind =
+        snow_shot::storage::ScreenshotToolbarLayoutKind::RecordingActionTools;
+    options.actionToolsLayout = snow_shot::storage::ScreenshotToolbarSettings().layout(
+        snow_shot::storage::ScreenshotToolbarLayoutKind::RecordingActionTools);
+    options.styleDefaults = snow_shot::presentation::screenshotCanvasToolStyleDefaults();
+    return options;
+}
+} // namespace
+
+// At file scope: an external-linkage class below holds fields of these
+// types; internal-linkage member types trip GCC's -Wsubobject-linkage.
 class RecordingToolbarEdgeControl final : public QAbstractButton {
   public:
     RecordingToolbarEdgeControl() : QAbstractButton(nullptr) {
@@ -150,42 +189,6 @@ class RecordingToolbarEdgeControl final : public QAbstractButton {
     }
     auto_hide::Side m_side = auto_hide::Side::Right;
 };
-
-ScreenshotToolPalette::Options recordingToolbarOptions() {
-    ScreenshotToolPalette::Options options;
-    options.showDragHandle = true;
-    options.showSelectTool = true;
-    options.showShapeTool = true;
-    options.showSpeechBubbleTool = true;
-    options.showArrowTool = true;
-    options.showLineTool = true;
-    options.showDistanceTool = true;
-    options.showAngleTool = true;
-    options.showFreeDrawTool = true;
-    options.showHighlightTool = true;
-    options.showPenHighlightTool = true;
-    options.showSpotlightTool = true;
-    // Magnifiers sample captured images; recording annotations have no image source.
-    options.showMagnifierTool = false;
-    options.showEraserTool = true;
-    options.showFilterTool = true;
-    options.showWatermarkTool = true;
-    options.showTextTool = true;
-    options.showSerialNumberTool = true;
-    options.showHistoryActions = true;
-    options.showRecordingControls = true;
-    options.recordingDrawingMode = true;
-    options.enableStyleToolbar = true;
-    options.toolbarLayout = snow_shot::storage::ScreenshotToolbarSettings().layout(
-        snow_shot::storage::ScreenshotToolbarLayoutKind::DrawingTools);
-    options.actionToolsLayoutKind =
-        snow_shot::storage::ScreenshotToolbarLayoutKind::RecordingActionTools;
-    options.actionToolsLayout = snow_shot::storage::ScreenshotToolbarSettings().layout(
-        snow_shot::storage::ScreenshotToolbarLayoutKind::RecordingActionTools);
-    options.styleDefaults = snow_shot::presentation::screenshotCanvasToolStyleDefaults();
-    return options;
-}
-} // namespace
 
 class ScreenRecordingToolbarWindow::AutoHide final : public QObject {
   public:

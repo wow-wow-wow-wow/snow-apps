@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Snow Shot
+GenericName=Screenshot Tool
+Comment=Capture, annotate, pin, and recognize screen content
+Exec=snow-shot %f
+Icon=snow-shot
+Terminal=false
+Categories=Graphics;Utility;
+Keywords=screenshot;capture;annotation;pin;ocr;
+StartupNotify=false
+MimeType=image/png;image/jpeg;image/webp;

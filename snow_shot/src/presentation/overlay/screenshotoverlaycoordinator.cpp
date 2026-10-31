@@ -249,8 +249,8 @@ void ScreenshotOverlayCoordinator::setScrollingResultPreview(
     }
     ScreenshotOverlayWindow* statusOwner = nullptr;
     bool foundBottomLeftOwner = false;
-    const QPointF bottomLeft(selection.left() + std::min(qreal(0.5), selection.width() / 2),
-                             selection.bottom() - std::min(qreal(0.5), selection.height() / 2));
+    const QPointF bottomLeft(selection.left() + std::min(0.5, selection.width() / 2),
+                             selection.bottom() - std::min(0.5, selection.height() / 2));
     displaySession.forEachActiveOverlay(
         [&](qsizetype, const CapturedDisplayModel& display, ScreenshotOverlayWindow* overlay) {
             const QRectF displayRect = ScreenshotGeometryMapper::displayCanvasRect(display);

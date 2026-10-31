@@ -105,6 +105,9 @@ class FakeComposer final : public ScreenshotSelectionImageComposerPort {
 
 class FakeDestination final : public ScreenshotSelectionExportDestinationPort {
   public:
+    // Keep the base's four-argument publishClipboard overload visible.
+    using ScreenshotSelectionExportDestinationPort::publishClipboard;
+
     bool publishClipboard(QObject*, ScreenshotClipboardPayload payload,
                           ClipboardCompletion completion) override {
         ++publishCount;

@@ -198,7 +198,15 @@ class ScreenshotRegionGeometry {
             return {{QStringLiteral("version"), 1}, {QStringLiteral("rectangles"), rectangles}};
         }
         QJsonArray operands;
-        const auto source = custom() ? m_vector->operands : QVector<Operand>{{path()}};
+        // Built through an immediately-invoked lambda: GCC 16's
+        // -Wdangling-pointer flags the equivalent ternary that binds the
+        // braced-initializer temporary through `auto`.
+        const auto source = [&] {
+            if (custom()) {
+                return m_vector->operands;
+            }
+            return QVector<Operand>{{path()}};
+        }();
         for (const auto& operand : source) {
             QJsonArray commands;
             for (int i = 0; i < operand.path.elementCount(); ++i) {

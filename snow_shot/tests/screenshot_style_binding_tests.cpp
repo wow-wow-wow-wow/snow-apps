@@ -271,7 +271,8 @@ void serialNumberAppearanceDefaultsPreserveSessionSequences() {
             style.number = 10 + index;
             require(canvas.applyStyleEdit(SnowCanvasSerialNumberEdit{
                         style, SnowCanvasSerialNumberStyleMixedNumericType |
-                                   (explicitStart ? SnowCanvasSerialNumberStyleMixedNumber : 0)}),
+                                   (explicitStart ? quint32{SnowCanvasSerialNumberStyleMixedNumber}
+                                                  : quint32{0})}),
                     "prepare independent automatic or explicit sequences");
             const qint64 start = explicitStart ? 10 + index : 1;
             require(create({80.0 + index * 140.0, 100}) == start &&
@@ -677,10 +678,11 @@ void newScreenshotDocumentRestartsSerialNumberSequences() {
                 style.numericType = types[index];
                 style.number = 10 + index;
                 require(canvas.applyStyleEdit(SnowCanvasSerialNumberEdit{
-                            style, SnowCanvasSerialNumberStyleMixedNumericType |
-                                       (capture == 0 && explicitStart
-                                            ? SnowCanvasSerialNumberStyleMixedNumber
-                                            : 0)}),
+                            style,
+                            SnowCanvasSerialNumberStyleMixedNumericType |
+                                (capture == 0 && explicitStart
+                                     ? quint32{SnowCanvasSerialNumberStyleMixedNumber}
+                                     : quint32{0})}),
                         "switch screenshot numbering format");
                 auto expected = defaults.serialNumber;
                 expected.numericType = types[index];
@@ -1447,7 +1449,8 @@ void runScreenshotSerialNumberRestartTests() {
         nextStyle.number = nextNumbers[index];
         require(canvas.commitStyleEdit(SnowCanvasSerialNumberEdit{
                     nextStyle, SnowCanvasSerialNumberStyleMixedNumericType |
-                                   (setNumber ? SnowCanvasSerialNumberStyleMixedNumber : 0)}),
+                                   (setNumber ? quint32{SnowCanvasSerialNumberStyleMixedNumber}
+                                              : quint32{0})}),
                 "activate the numeric type's independent creation sequence");
     };
     const auto rightClick = [&](QPointF point) {

@@ -477,8 +477,12 @@ class MutableImageRenderer final : public SnowCanvasCustomRenderer {
     }
 
     QList<SnowCanvasBaseImageSource> baseImageSources() const override {
-        return sourcesEnabled ? QList<SnowCanvasBaseImageSource>{{image, canvasRect, {}}}
-                              : QList<SnowCanvasBaseImageSource>{};
+        // Split from a ternary: GCC 16's -Wdangling-pointer flags the
+        // temporary QList bound through the conditional expression.
+        if (!sourcesEnabled) {
+            return {};
+        }
+        return QList<SnowCanvasBaseImageSource>{{image, canvasRect, {}}};
     }
 
     void renderBeforeCanvas(QPainter& painter, const SnowCanvasRenderContext& context) override {

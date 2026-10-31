@@ -1,0 +1,6 @@
+#!/bin/bash
+# AppRun for the Snow Shot AppImage. Resolves the bundled tree relative to
+# this script and lets Qt auto-select Wayland with an X11 fallback.
+APPDIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+export APPDIR
+exec "$APPDIR/usr/bin/snow_shot" "$@"

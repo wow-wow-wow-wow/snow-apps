@@ -41,11 +41,11 @@
 #include "snow_shot/presentation/styles/themecolorscheme.h"
 #include "snow_shot/presentation/screenrecordingfolder.h"
 
-#if defined(Q_OS_WIN) || defined(_WIN32) || defined(Q_OS_MACOS)
+// The exclusion API is declared for every platform; Linux degrades to
+// unsupported answers in its own translation unit.
 #include "snow_shot/platform/windowcaptureexclusion.h"
 #if defined(Q_OS_WIN) || defined(_WIN32)
 #include "snow_shot/platform/windows/windowchrome.h"
-#endif
 #endif
 
 #include "snow_capture.h"
@@ -203,34 +203,10 @@ struct RecordingSessionDeleter {
 };
 using RecordingSessionHandle = std::unique_ptr<SnowRecordingSession, RecordingSessionDeleter>;
 
-struct FinalizationResult {
-    bool ok = false;
-    QString error;
-    SnowRecordingSource* source = nullptr;
-};
 
-struct StartAttemptResult {
-    RecordingSessionHandle session;
-    QString outputPath;
-    QString error;
-};
 
 // The start worker only publishes success and queues a GUI-thread commit. Keeping
 // this independent of the controller also covers a window retired during startup.
-struct RecordingAreaHistoryCommit {
-    QRect rectangle;
-    QPointer<snow_shot::storage::ConfigurationStore> configuration;
-    std::atomic_bool started{false};
-    bool committed = false; // GUI thread only.
-    bool saved = false;     // GUI thread only.
-
-    void commit() {
-        if (committed || !started.load() || !configuration)
-            return;
-        committed = true;
-        saved = snow_shot::storage::RecordingAreaHistorySettings::append(*configuration, rectangle);
-    }
-};
 
 QString captureError() {
     const char* error = snow_recording_last_error_message();
@@ -266,9 +242,32 @@ void copyFileToClipboard(const QString& filePath) {
 }
 } // namespace
 
-namespace {
-// UI resources and connection contexts exist only for an open selection. Backend
-// finalization belongs to the controller and can finish after this object is retired.
+// At file scope: an external-linkage class below holds fields of these
+// types; internal-linkage member types trip GCC's -Wsubobject-linkage.
+struct FinalizationResult {
+    bool ok = false;
+    QString error;
+    SnowRecordingSource* source = nullptr;
+};
+struct StartAttemptResult {
+    RecordingSessionHandle session;
+    QString outputPath;
+    QString error;
+};
+struct RecordingAreaHistoryCommit {
+    QRect rectangle;
+    QPointer<snow_shot::storage::ConfigurationStore> configuration;
+    std::atomic_bool started{false};
+    bool committed = false; // GUI thread only.
+    bool saved = false;     // GUI thread only.
+
+    void commit() {
+        if (committed || !started.load() || !configuration)
+            return;
+        committed = true;
+        saved = snow_shot::storage::RecordingAreaHistorySettings::append(*configuration, rectangle);
+    }
+};
 struct RecordingUiSession final : QObject {
     explicit RecordingUiSession(QObject* parent) : QObject(parent) {}
     ~RecordingUiSession() override {
@@ -286,6 +285,10 @@ struct RecordingUiSession final : QObject {
         std::make_unique<snow_shot::presentation::recording::RecordingColorSampler>(*area,
                                                                                     *toolbar);
 };
+
+namespace {
+// UI resources and connection contexts exist only for an open selection. Backend
+// finalization belongs to the controller and can finish after this object is retired.
 } // namespace
 
 struct ScreenRecordingController::Impl {

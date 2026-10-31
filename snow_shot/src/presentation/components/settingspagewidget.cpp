@@ -55,32 +55,6 @@ namespace settings = snow_shot::presentation::settings;
 namespace settings_ui = snow_shot::presentation::components;
 namespace form_fields = snow_shot::presentation::components::form_fields;
 
-class RelatedSettingsPanel final : public QWidget {
-  public:
-    explicit RelatedSettingsPanel(QWidget* parent) : QWidget(parent) {
-        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    }
-
-    void applyTheme(const snow_shot::presentation::styles::ThemeColorScheme& scheme) {
-        background = scheme.map.colorFillQuaternary;
-        radius = scheme.metricAlias.borderRadiusLG;
-        update();
-    }
-
-  protected:
-    void paintEvent(QPaintEvent*) override {
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::Antialiasing);
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(
-            snow_shot::presentation::styles::mainWindowBackgroundColor(this, background));
-        painter.drawRoundedRect(QRectF(rect()), radius, radius);
-    }
-
-  private:
-    QColor background;
-    int radius = 0;
-};
 
 std::optional<snow_shot::presentation::AppPermission>
 permissionForRenderer(settings::SettingsCustomRenderer renderer) {
@@ -112,6 +86,36 @@ permissionForRenderer(settings::SettingsCustomRenderer renderer) {
 }
 
 } // namespace
+
+// At file scope: SettingsPageWidget::Impl below holds a pointer to this
+// type, and external-linkage classes may not expose internal-linkage
+// member types (GCC -Wsubobject-linkage).
+class RelatedSettingsPanel final : public QWidget {
+  public:
+    explicit RelatedSettingsPanel(QWidget* parent) : QWidget(parent) {
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    }
+
+    void applyTheme(const snow_shot::presentation::styles::ThemeColorScheme& scheme) {
+        background = scheme.map.colorFillQuaternary;
+        radius = scheme.metricAlias.borderRadiusLG;
+        update();
+    }
+
+  protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(
+            snow_shot::presentation::styles::mainWindowBackgroundColor(this, background));
+        painter.drawRoundedRect(QRectF(rect()), radius, radius);
+    }
+
+  private:
+    QColor background;
+    int radius = 0;
+};
 
 class SettingsPageWidget::Impl {
   public:

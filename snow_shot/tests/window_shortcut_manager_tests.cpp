@@ -138,6 +138,8 @@ bool sendKey(QObject* receiver, QEvent::Type type, Qt::Key key,
     return filtered || event.isAccepted();
 }
 
+// Only the macOS-native shortcut tests below send native virtual keys.
+#ifdef Q_OS_MACOS
 bool sendNativeKey(QObject* receiver, QEvent::Type type, Qt::Key logicalKey,
                    Qt::KeyboardModifiers modifiers, quint32 nativeVirtualKey,
                    bool autoRepeat = false) {
@@ -147,6 +149,7 @@ bool sendNativeKey(QObject* receiver, QEvent::Type type, Qt::Key logicalKey,
     const bool filtered = QCoreApplication::sendEvent(receiver, &event);
     return filtered || event.isAccepted();
 }
+#endif
 
 WindowShortcutManager::Binding binding(const QString& id, Qt::Key key, int priority,
                                        std::function<bool()> action) {

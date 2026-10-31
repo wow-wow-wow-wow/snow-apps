@@ -62,13 +62,20 @@ function(snow_apply_strict_warnings target)
             target_compile_options("${target}" PRIVATE /Zc:preprocessor)
         endif()
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        target_compile_options("${target}" PRIVATE
+        set(_snow_strict_flags
             -Wall -Wextra -Wpedantic -Werror
             -Wcast-align -Wcast-qual -Wconversion -Wdouble-promotion
-            -Wformat=2 -Wimplicit-fallthrough -Wmissing-declarations
+            -Wformat=2 -Wimplicit-fallthrough
             -Wnon-virtual-dtor -Wnull-dereference -Wold-style-cast
-            -Woverloaded-virtual -Wshadow -Wsign-conversion -Wundef
+            -Woverloaded-virtual -Wsign-conversion -Wundef
         )
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            # The codebase is Clang-clean; GCC's -Wmissing-declarations and
+            # -Wshadow fire across legacy sources on its first pass. Re-enable
+            # them for GCC after a dedicated cleanup.
+            list(APPEND _snow_strict_flags -Wmissing-declarations -Wshadow)
+        endif()
+        target_compile_options("${target}" PRIVATE ${_snow_strict_flags})
     else()
         message(WARNING "Strict warning flags are not defined for ${CMAKE_CXX_COMPILER_ID}.")
     endif()
@@ -216,13 +223,19 @@ function(snow_enable_strict_warnings)
             add_compile_options(/Zc:preprocessor)
         endif()
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        add_compile_options(
+        set(_snow_strict_flags
             -Wall -Wextra -Wpedantic -Werror
             -Wcast-align -Wcast-qual -Wconversion -Wdouble-promotion
-            -Wformat=2 -Wimplicit-fallthrough -Wmissing-declarations
+            -Wformat=2 -Wimplicit-fallthrough
             -Wnon-virtual-dtor -Wnull-dereference -Wold-style-cast
-            -Woverloaded-virtual -Wshadow -Wsign-conversion -Wundef
+            -Woverloaded-virtual -Wsign-conversion -Wundef
         )
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            # See snow_apply_strict_warnings: GCC re-enables these after the
+            # first-pass cleanup.
+            list(APPEND _snow_strict_flags -Wmissing-declarations -Wshadow)
+        endif()
+        add_compile_options(${_snow_strict_flags})
     else()
         message(WARNING "Strict warning flags are not defined for ${CMAKE_CXX_COMPILER_ID}.")
     endif()

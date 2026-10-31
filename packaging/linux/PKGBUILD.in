@@ -1,0 +1,33 @@
+pkgname=snow-shot
+pkgver=@PKGVER@
+pkgrel=1
+pkgdesc='Screenshot utility for capturing, annotating, pinning, and recognizing screen content'
+arch=('x86_64')
+url='https://snowshot.top'
+license=('GPL-3.0-or-later')
+depends=(
+    'bash' 'glibc' 'gcc-libs'
+    'wayland' 'libxkbcommon' 'fontconfig' 'dbus' 'glib2'
+    'libgl' 'mesa' 'libdrm'
+)
+optdepends=('xdg-desktop-portal-kde: screen capture and global shortcuts on Wayland')
+options=('!strip')
+install=
+changelog=
+
+# The payload directory is prepared by CI from the Linux build tree with the
+# same /opt/snow-shot + /usr integration layout as the Debian package.
+package() {
+    install -d "$pkgdir/opt"
+    cp -a "$srcdir/payload/opt/snow-shot" "$pkgdir/opt/snow-shot"
+
+    install -Dm755 "$srcdir/payload/usr/bin/snow-shot" "$pkgdir/usr/bin/snow-shot"
+    install -Dm644 "$srcdir/payload/usr/share/applications/snow_shot.desktop" \
+        "$pkgdir/usr/share/applications/snow_shot.desktop"
+    install -Dm644 "$srcdir/payload/usr/share/metainfo/top.snowshot.snow-shot.metainfo.xml" \
+        "$pkgdir/usr/share/metainfo/top.snowshot.snow-shot.metainfo.xml"
+    if [[ -d "$srcdir/payload/usr/share/icons/hicolor" ]]; then
+        install -d "$pkgdir/usr/share/icons"
+        cp -a "$srcdir/payload/usr/share/icons/hicolor" "$pkgdir/usr/share/icons/hicolor"
+    fi
+}

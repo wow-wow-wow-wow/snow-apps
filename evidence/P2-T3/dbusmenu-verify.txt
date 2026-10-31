@@ -1,0 +1,186 @@
+method return time=1793429960.271755 sender=:1.1259 -> destination=:1.1277 serial=14 reply_serial=2
+   uint32 16
+   struct {
+      int32 0
+      array [
+         dict entry(
+            string "children-display"
+            variant                string "submenu"
+         )
+      ]
+      array [
+         variant             struct {
+               int32 1
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "截图	F1 / Alt+F"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 2
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "延时 3 秒执行"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 3
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "固定到屏幕"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 4
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "文本识别"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 5
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "复制到剪贴板	Ctrl+F1"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 6
+               array [
+                  dict entry(
+                     string "type"
+                     variant                         string "separator"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 7
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "将剪贴板内容固定到屏幕	F3"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 8
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "恢复上次关闭的窗口	Ctrl+F3"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 9
+               array [
+                  dict entry(
+                     string "type"
+                     variant                         string "separator"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 10
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "屏幕录制"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 11
+               array [
+                  dict entry(
+                     string "type"
+                     variant                         string "separator"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 12
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "禁用全局快捷键"
+                  )
+                  dict entry(
+                     string "toggle-state"
+                     variant                         int32 0
+                  )
+                  dict entry(
+                     string "toggle-type"
+                     variant                         string "checkmark"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 13
+               array [
+                  dict entry(
+                     string "type"
+                     variant                         string "separator"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 14
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "显示主界面"
+                  )
+               ]
+               array [
+               ]
+            }
+         variant             struct {
+               int32 15
+               array [
+                  dict entry(
+                     string "label"
+                     variant                         string "退出"
+                  )
+               ]
+               array [
+               ]
+            }
+      ]
+   }

@@ -327,6 +327,87 @@
       }
     },
     {
+      "name": "linux-gcc-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "${sourceDir}/.tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "environment": {
+        "VCPKG_ROOT": "${sourceDir}/.tools/vcpkg"
+      },
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_CXX_EXTENSIONS": "OFF",
+        "SNOW_APPS_ENABLE_RELEASE_OPTIMIZATION": "ON",
+        "SNOW_APPS_ENABLE_RELEASE_SIZE_OPTIMIZATION": "OFF",
+        "VCPKG_TARGET_TRIPLET": "x64-linux-snow-shot",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/.tools/vcpkg/installed/dynamic",
+        "VCPKG_OVERLAY_PORTS": "${sourceDir}/cmake/vcpkg-overlay-ports",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/vcpkg-overlay-triplets",
+        "VCPKG_MANIFEST_INSTALL": "ON",
+        "VCPKG_MANIFEST_FEATURES": "snow-shot;full-codecs;image-viewer",
+        "SNOW_APPS_STRICT_COMPILE": "ON",
+        "SNOW_APPS_ENABLE_CLANG_TIDY": "OFF",
+        "SNOW_APPS_BUILD_ANT_DESIGN_QT": "ON",
+        "SNOW_APPS_BUILD_SNOW_IMAGE": "ON",
+        "SNOW_APPS_BUILD_DRAW_ENGINE": "ON",
+        "SNOW_APPS_BUILD_IMAGE_VIEWER": "ON",
+        "SNOW_APPS_BUILD_SNOW_SHOT": "ON",
+        "SNOW_APPS_BUILD_SNOW_SHOT_MINI": "OFF"
+      }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Linux GCC Debug",
+      "inherits": "linux-gcc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SNOW_APPS_BUILD_TESTS": "ON",
+        "SNOW_APPS_BUILD_BENCHMARKS": "OFF",
+        "SNOW_APPS_RELEASE_STATIC": "OFF",
+        "SNOW_APPS_PACKAGE_SNOW_SHOT": "OFF",
+        "SNOW_APPS_API_BASE_URL": "http://localhost:8080",
+        "SNOW_IMAGE_PROFILE": "full",
+        "SNOW_IMAGE_DEFAULT_LINKAGE": "static"
+      }
+    },
+    {
+      "name": "linux-gcc-performance",
+      "displayName": "Linux GCC Performance",
+      "inherits": "linux-gcc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SNOW_APPS_BUILD_TESTS": "ON",
+        "SNOW_APPS_BUILD_BENCHMARKS": "ON",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE": "ON",
+        "SNOW_APPS_RELEASE_STATIC": "OFF",
+        "SNOW_APPS_PACKAGE_SNOW_SHOT": "OFF",
+        "SNOW_APPS_API_BASE_URL": "https://snowshot.top",
+        "SNOW_IMAGE_PROFILE": "full",
+        "SNOW_IMAGE_DEFAULT_LINKAGE": "static"
+      }
+    },
+    {
+      "name": "linux-gcc-release",
+      "displayName": "Linux GCC Release",
+      "inherits": "linux-gcc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SNOW_APPS_BUILD_TESTS": "OFF",
+        "SNOW_APPS_BUILD_BENCHMARKS": "OFF",
+        "SNOW_APPS_RELEASE_STATIC": "OFF",
+        "SNOW_APPS_PACKAGE_SNOW_SHOT": "OFF",
+        "SNOW_APPS_API_BASE_URL": "https://snowshot.top",
+        "SNOW_IMAGE_PROFILE": "full",
+        "SNOW_IMAGE_DEFAULT_LINKAGE": "static"
+      }
+    },
+    {
       "name": "snow-shot-msvc-arm64-base",
       "hidden": true,
       "generator": "Visual Studio 18 2026",
@@ -560,6 +641,28 @@
       ]
     },
     {
+      "name": "build-linux-gcc-debug",
+      "configurePreset": "linux-gcc-debug",
+      "targets": [
+        "snow-all"
+      ]
+    },
+    {
+      "name": "build-linux-gcc-performance",
+      "configurePreset": "linux-gcc-performance",
+      "targets": [
+        "snow-all"
+      ]
+    },
+    {
+      "name": "build-linux-gcc-release",
+      "configurePreset": "linux-gcc-release",
+      "targets": [
+        "snow_shot",
+        "snow_image_viewer"
+      ]
+    },
+    {
       "name": "build-snow-shot-msvc-arm64-debug",
       "configurePreset": "snow-shot-msvc-arm64-debug",
       "configuration": "Debug",
@@ -689,6 +792,30 @@
       "filter": {
         "exclude": {
           "label": "interactive|e2e|benchmark|windows"
+        }
+      }
+    },
+    {
+      "name": "test-linux-gcc-debug",
+      "configurePreset": "linux-gcc-debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "exclude": {
+          "label": "interactive|e2e|benchmark|windows|macos"
+        }
+      }
+    },
+    {
+      "name": "test-linux-gcc-performance",
+      "configurePreset": "linux-gcc-performance",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "exclude": {
+          "label": "interactive|e2e|benchmark|windows|macos"
         }
       }
     },

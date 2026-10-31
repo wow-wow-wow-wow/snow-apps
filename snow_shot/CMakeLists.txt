@@ -69,8 +69,10 @@ endif()
 if(APPLE)
     set(SNOW_SELECTED_FILES_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/macos/selectedfiles.mm)
     set(SNOW_SELECTED_FILES_LIBRARIES "-framework AppKit" "-framework ApplicationServices")
-else()
+elseif(WIN32)
     set(SNOW_SELECTED_FILES_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/windows/selectedfiles.cpp)
+else()
+    set(SNOW_SELECTED_FILES_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/linux/selectedfiles.cpp)
 endif()
 
 set(SNOW_PINNED_PLATFORM_SOURCES)
@@ -122,7 +124,7 @@ if(WIN32 AND (SNOW_SHOT_BUILD_TESTS OR SNOW_SHOT_DISTRIBUTION_CHANNEL STREQUAL "
 endif()
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/SnowQt.cmake")
-snow_find_qt(COMPONENTS Widgets LinguistTools Svg Network)
+    snow_find_qt(COMPONENTS Widgets LinguistTools Svg Network DBus)
 
 add_library(snow_shot_distribution STATIC
     include/snow_shot/app/distribution.h
@@ -208,6 +210,10 @@ elseif(APPLE)
         Qt6::QCocoaIntegrationPlugin
         Qt6::QMacStylePlugin
         Qt6::QSecureTransportBackendPlugin)
+elseif(UNIX)
+    list(APPEND _snow_shot_static_qt_plugins
+        Qt6::QXcbIntegrationPlugin
+        Qt6::QWaylandIntegrationPlugin)
 endif()
 
 if(SNOW_SHOT_QT_STATIC)
@@ -746,8 +752,11 @@ target_link_libraries(snow_shot_memory_optimization PUBLIC snow_shot_runtime_act
 if(APPLE)
     target_sources(snow_shot_memory_optimization PRIVATE src/platform/macos/memoryoptimization.cpp)
     target_link_libraries(snow_shot_memory_optimization PRIVATE Qt6::Gui)
-else()
+elseif(WIN32)
     target_sources(snow_shot_memory_optimization PRIVATE src/platform/windows/memoryoptimization.cpp)
+else()
+    target_sources(snow_shot_memory_optimization PRIVATE src/platform/linux/memoryoptimization.cpp)
+    target_link_libraries(snow_shot_memory_optimization PRIVATE Qt6::Gui)
 endif()
 if(WIN32)
     target_link_libraries(snow_shot_memory_optimization PRIVATE psapi user32)
@@ -997,6 +1006,9 @@ elseif(APPLE)
     list(APPEND SNOW_SHOT_GLOBAL_SHORTCUT_SOURCES
         src/platform/macos/globalshortcutbackend.cpp
         src/platform/macos/focusedfullscreenwindow.mm)
+elseif(UNIX)
+    list(APPEND SNOW_SHOT_GLOBAL_SHORTCUT_SOURCES
+        src/platform/linux/globalshortcutbackend_portal.cpp)
 endif()
 list(APPEND SNOW_SHOT_SETTINGS_SOURCES ${SNOW_SHOT_GLOBAL_SHORTCUT_SOURCES})
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/presentation/components/screenshothistorypagewidget.cpp"
@@ -1082,7 +1094,9 @@ endif()
 add_library(snow_shot_administrator STATIC
     src/platform/windows/autostartregistration.cpp
     src/platform/windows/shellcontextmenuregistration.cpp
-    src/platform/windows/administratorlaunch.cpp)
+    src/platform/windows/administratorlaunch.cpp
+    # XDG autostart reconciliation for Linux launches.
+    src/platform/linux/autostartregistration.cpp)
 target_include_directories(snow_shot_administrator PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(snow_shot_administrator PUBLIC Qt6::Core Qt6::Network)
 if(WIN32)
@@ -1178,7 +1192,8 @@ target_compile_definitions(snow_shot_settings PRIVATE
     SNOW_SHOT_PROJECT_URL="${SNOW_SHOT_PROJECT_URL}"
     SNOW_SHOT_QQ_GROUP_3_URL="${SNOW_SHOT_QQ_GROUP_3_URL}"
 )
-target_link_libraries(snow_shot_settings PRIVATE snow_shot_image_codec Qt6::Svg Qt6::Network snow_shot_administrator)
+target_link_libraries(snow_shot_settings PRIVATE snow_shot_image_codec Qt6::Svg Qt6::Network
+    Qt6::DBus snow_shot_administrator)
 add_library(snow_shot_global_mouse STATIC
     include/snow_shot/presentation/globalmousemanager.h
     include/snow_shot/presentation/globalmousegesture.h
@@ -1873,11 +1888,11 @@ target_link_libraries(snow_shot_export_naming PUBLIC Qt6::Gui)
 if(APPLE)
     target_sources(snow_shot_export_naming PRIVATE src/platform/macos/screenshotwindownames.mm)
     target_link_libraries(snow_shot_export_naming PRIVATE "-framework AppKit" "-framework CoreGraphics")
-else()
+elseif(WIN32)
     target_sources(snow_shot_export_naming PRIVATE src/platform/windows/screenshotwindownames.cpp)
-    if(WIN32)
-        target_link_libraries(snow_shot_export_naming PRIVATE dwmapi version)
-    endif()
+    target_link_libraries(snow_shot_export_naming PRIVATE dwmapi version)
+else()
+    target_sources(snow_shot_export_naming PRIVATE src/platform/linux/screenshotwindownames.cpp)
 endif()
 
 set(SNOW_SHOT_IMAGE_EDITING_SOURCES
@@ -2086,6 +2101,8 @@ if(APPLE)
         src/platform/macos/systemtraymenu.mm
         src/platform/macos/windowcaptureexclusion.mm)
     list(APPEND PROJECT_HEADERS include/snow_shot/platform/macos/applicationactivation.h)
+elseif(UNIX)
+    list(APPEND PROJECT_CXX_SOURCES src/platform/linux/windowcaptureexclusion.cpp)
 endif()
 
 include(SnowSimd)
@@ -2145,6 +2162,7 @@ target_link_libraries(snow_shot PRIVATE
     snow_shot_memory_optimization
     snow_shot_crash_bridge
     snow_shot_image_codec
+    Qt6::DBus
     MINIZIP::minizip-ng
 )
 include("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/SnowShotUpdates.cmake")
@@ -2352,7 +2370,8 @@ if(SNOW_SHOT_BUILD_TESTS)
     add_executable(snow-shot-global-mouse-tests tests/global_mouse_tests.cpp
         ${SNOW_SHOT_GLOBAL_SHORTCUT_SOURCES}
         src/presentation/capture/screenshotglobalmousedrag.cpp)
-    target_link_libraries(snow-shot-global-mouse-tests PRIVATE snow_shot_global_mouse Qt6::Widgets)
+    target_link_libraries(snow-shot-global-mouse-tests PRIVATE snow_shot_global_mouse Qt6::Widgets
+        Qt6::DBus)
     if(APPLE)
         target_link_libraries(snow-shot-global-mouse-tests PRIVATE
             "${SNOW_SHOT_CARBON_FRAMEWORK}"
@@ -3747,7 +3766,8 @@ if(SNOW_SHOT_BUILD_TESTS)
         src/presentation/services/languagemanager.cpp)
     target_include_directories(snow-shot-window-group-switcher-tests PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/include" "${SNOW_SHOT_DRAW_ENGINE_QT_DIR}/include")
-    target_link_libraries(snow-shot-window-group-switcher-tests PRIVATE snow_shot_global_mouse ant_design_qt Qt6::Widgets)
+    target_link_libraries(snow-shot-window-group-switcher-tests PRIVATE snow_shot_global_mouse
+        ant_design_qt Qt6::Widgets Qt6::DBus)
     if(APPLE)
         set_source_files_properties(tests/window_group_switcher_tests.cpp PROPERTIES LANGUAGE OBJCXX)
         target_link_libraries(snow-shot-window-group-switcher-tests PRIVATE
@@ -8428,6 +8448,10 @@ if(SNOW_SHOT_BUILD_TESTS)
         src/platform/windows/windowchrome.cpp
     )
     snow_shot_link_macos_window_platform(snow-shot-screen-recording-controller-tests)
+    if(UNIX AND NOT APPLE)
+        target_sources(snow-shot-screen-recording-controller-tests PRIVATE
+            src/platform/linux/windowcaptureexclusion.cpp)
+    endif()
     target_include_directories(snow-shot-screen-recording-controller-tests PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${SNOW_SHOT_CAPTURE_CRATES_DIR}/crates/snow-capture-c/include"
@@ -10799,6 +10823,58 @@ if(WIN32)
             CACHE INTERNAL "FFmpeg runtime files installed with Snow Shot.")
         unset(SNOW_RUNTIME_FILES)
     endif()
+elseif(UNIX)
+    # Linux resolves FFmpeg through pkg-config against the vcpkg install tree;
+    # the import-library and DLL staging concerns above are Windows-only.
+    set(_SNOW_SHOT_SAVED_PKG_CONFIG_PATH "$ENV{PKG_CONFIG_PATH}")
+    set(ENV{PKG_CONFIG_PATH} "${SNOW_FFMPEG_ROOT}/lib/pkgconfig")
+    find_package(PkgConfig REQUIRED)
+    set(_snow_ffmpeg_modules libavfilter libavformat libavcodec libswresample libswscale libavutil)
+    pkg_check_modules(SNOW_SHOT_FFMPEG REQUIRED IMPORTED_TARGET GLOBAL ${_snow_ffmpeg_modules})
+    set(ENV{PKG_CONFIG_PATH} "${_SNOW_SHOT_SAVED_PKG_CONFIG_PATH}")
+    unset(_SNOW_SHOT_SAVED_PKG_CONFIG_PATH)
+    # Canvas-only consumers also reach recording symbols in the bundled archive.
+    foreach(_snow_rust_bundle IN ITEMS snow_shot_rust_ffi_bundle snow_shot_full_rust_ffi_bundle)
+        if(TARGET ${_snow_rust_bundle})
+            target_link_libraries(${_snow_rust_bundle} INTERFACE PkgConfig::SNOW_SHOT_FFMPEG)
+        endif()
+    endforeach()
+    unset(_snow_rust_bundle)
+    target_link_libraries(snow_shot PRIVATE PkgConfig::SNOW_SHOT_FFMPEG)
+    if(TARGET snow-shot-screen-recording-controller-tests)
+        target_link_libraries(snow-shot-screen-recording-controller-tests PRIVATE
+            PkgConfig::SNOW_SHOT_FFMPEG
+        )
+    endif()
+    if(TARGET snow-shot-screenshot-canvas-renderer-tests)
+        target_link_libraries(snow-shot-screenshot-canvas-renderer-tests PRIVATE
+            PkgConfig::SNOW_SHOT_FFMPEG
+        )
+    endif()
+    # The toolbar benchmarks link the canvas engine, which pulls the Rust FFI
+    # bundle and with it the FFmpeg import libraries.
+    foreach(_snow_shot_ffmpeg_toolbar_benchmark IN ITEMS
+            snow-shot-table-preparation-benchmark
+            snow-shot-screenshot-toolbar-render-benchmark
+            snow-shot-screenshot-toolbar-display-benchmark
+            snow-shot-file-pin-batch-performance-benchmark)
+        if(TARGET ${_snow_shot_ffmpeg_toolbar_benchmark})
+            target_link_libraries(${_snow_shot_ffmpeg_toolbar_benchmark} PRIVATE
+                PkgConfig::SNOW_SHOT_FFMPEG
+            )
+        endif()
+    endforeach()
+    unset(_snow_shot_ffmpeg_toolbar_benchmark)
+    # The OCR background executables also reach the shared Rust bundle through the canvas.
+    foreach(_snow_shot_ocr_background_target IN ITEMS
+            snow-shot-ocr-background-tests
+            snow-shot-ocr-background-performance-benchmark)
+        if(TARGET ${_snow_shot_ocr_background_target})
+            target_link_libraries(${_snow_shot_ocr_background_target} PRIVATE
+                PkgConfig::SNOW_SHOT_FFMPEG)
+        endif()
+    endforeach()
+    unset(_snow_shot_ocr_background_target)
 endif()
 
 target_sources(snow_shot PRIVATE src/diagnostics/ffmpegdiagnostics.cpp)

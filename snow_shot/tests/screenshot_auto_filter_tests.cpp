@@ -279,8 +279,11 @@ void renderingAndExport() {
     require(restored.restoreDocumentSession(f.runtime.serializeDocumentSession()),
             "pinned session restores");
     SnowCanvasWidget restoredCanvas(restored);
+    // Named local: GCC 16's -Wdangling-pointer flags the braced temporary
+    // QList bound directly to the const-ref parameter.
+    const QList<CanvasExportSource> restoredSources = {{source, f.bounds}};
     require(restoredCanvas.autoFilterRegions()->regions.size() == 2 &&
-                restored.renderToImage(f.bounds, source.size(), {{source, f.bounds}}) == render(),
+                restored.renderToImage(f.bounds, source.size(), restoredSources) == render(),
             "restored regions and filtered export match original session");
     f.canvas.setViewportCamera(100, 100, 2);
     require(f.controller.available(), "viewport zoom does not invalidate image bounds");

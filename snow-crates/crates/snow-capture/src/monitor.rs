@@ -81,6 +81,9 @@ impl MonitorId {
         }
     }
 
+    // Only the Windows and macOS backends consume the raw handle today; the
+    // Linux backend arrives with P3-T3.
+    #[cfg_attr(not(any(target_os = "windows", target_os = "macos")), allow(dead_code))]
     pub(crate) fn raw_handle(&self) -> isize {
         self.handle
     }

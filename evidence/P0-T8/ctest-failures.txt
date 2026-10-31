@@ -1,0 +1,54 @@
+  1/875 Test   #1: snow_image_core_tests
+  9/875 Test   #9: snow_image_heif_tests
+ 77/875 Test  #82: snow-canvas-magnifier-render-tests
+ 88/875 Test  #93: snow-canvas-text-draft-tests
+ 90/875 Test  #95: snow-canvas-text-render-cache-tests
+103/875 Test #108: snow-canvas-shape-text-tests
+104/875 Test #109: snow-canvas-shape-text-delete-tests
+105/875 Test #110: snow-canvas-serial-number-drag-tests
+133/875 Test #138: snow-canvas-spotlight-render-tests
+134/875 Test #139: snow_image_viewer_tests
+135/875 Test #140: snow_image_viewer_export_reuse_tests
+136/875 Test #141: snow_image_viewer_worker_lifecycle_tests
+138/875 Test #143: snow_image_viewer_pipeline_notification_lifetime_tests
+181/875 Test #188: snow-shot-image-split-editor-tests
+182/875 Test #189: snow-shot-image-split-window-tests
+243/875 Test #254: snow-shot-test-runner-policy-tests
+258/875 Test #269: snow-shot-settings-catalog-tests
+302/875 Test #314: snow-shot-window-element-api-tests
+303/875 Test #315: snow-shot-selector-phased-tests
+304/875 Test #316: snow-shot-selector-lifecycle-tests
+308/875 Test #320: snow-shot-system-tray-controller-tests
+325/875 Test #339: snow-shot-shortcut-key-row-tests
+327/875 Test #341: snow-shot-form-layout-tests
+373/875 Test #387: snow-shot-screenshot-canvas-renderer-tests
+381/875 Test #395: snow-shot-scrolling-overlay-tests
+392/875 Test #406: snow-shot-ocr-canvas-renderer-tests
+393/875 Test #407: snow-shot-ocr-line-box-rendering-tests
+452/875 Test #474: snow-shot-pinned-middle-click-tests
+454/875 Test #476: snow-shot-pinned-double-click-tests
+459/875 Test #481: snow-shot-pinned-save-dialog-tests
+487/875 Test #511: snow-shot-pinned-group-menu-tests
+488/875 Test #512: snow-shot-pinned-cached-ocr-tests
+492/875 Test #516: snow-shot-pinned-invalid-ocr-restore-tests
+536/875 Test #560: snow-shot-export-dialog-placement-tests
+562/875 Test #586: snow-shot-pinned-recognition-save-tests
+593/875 Test #634: snow-shot-screenshot-action-shortcut-display-tests
+621/875 Test #672: snow-shot-scrolling-capture-settings-tests
+658/875 Test #716: snow-shot-main-content-header-tests
+670/875 Test #730: snow-shot-recording-post-processing-tests
+683/875 Test #743: snow-shot-recording-effects-preview-tests
+684/875 Test #745: snow-shot-recording-playback-preview-dpi-1-tests
+685/875 Test #746: snow-shot-recording-playback-preview-dpi-1.25-tests
+686/875 Test #747: snow-shot-recording-playback-preview-dpi-1.5-tests
+687/875 Test #748: snow-shot-recording-playback-preview-dpi-1.75-tests
+688/875 Test #749: snow-shot-recording-playback-preview-dpi-2-tests
+691/875 Test #752: snow-shot-recording-webcam-settings-tests
+708/875 Test #772: snow-shot-ocr-cpu-recognition-service-tests
+724/875 Test #791: snow-shot-image-conversion-pinned-tests
+772/875 Test #841: snow-shot-screenshot-controller-clipboard-tests
+780/875 Test #849: snow-shot-history-selection-presentation-tests
+795/875 Test #864: snow-shot-recording-audio-controller-tests
+797/875 Test #866: snow-shot-floating-toolbar-tests
+826/875 Test #897: snow-shot-release-optimization-policy-tests
+863/875 Test #943: snow-shot-layout-compaction-tests

@@ -843,6 +843,33 @@
           ]
         }
       ]
+    },
+    "snow-linux-media": {
+      "description": "Standalone Linux capture recording and export codecs with software fallbacks",
+      "supports": "linux",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": [
+            "avcodec",
+            "avfilter",
+            "avformat",
+            "swresample",
+            "swscale",
+            "webp",
+            "x264",
+            "x265",
+            "zlib"
+          ]
+        },
+        {
+          "name": "x265",
+          "features": [
+            "main10"
+          ]
+        }
+      ]
     }
   }
 }

@@ -3946,12 +3946,15 @@ void watermarkTemplateSettingsRepairAndSurviveRestart() {
                     QStringLiteral("  {text} {YYYY}  "),
             "watermark-template repair must persist a canonical JSON array");
 
-    require(settings.setTemplates({
+    // Named locals: GCC 16's -Wdangling-pointer flags the braced temporary
+    // QVector bound directly to the const-ref parameter.
+    const QVector<storage::WatermarkTemplate> watermarkTemplates = {
                 {QStringLiteral("  Duplicate  "), QStringLiteral(" {text} ")},
                 {QStringLiteral("Duplicate"), QStringLiteral(" {text} ")},
                 {QStringLiteral("Invalid"), QStringLiteral(" \t ")},
                 {QStringLiteral("   "), QStringLiteral("{YYYY}")},
-            }) &&
+            };
+    require(settings.setTemplates(watermarkTemplates) &&
                 applicationStorage.flushNow().success,
             "watermark-template settings must save valid entries");
     static_cast<void>(initialize(executable, temporary.path()));
@@ -4011,8 +4014,9 @@ void drawTemplateSettingsRepairAndSurviveRestart() {
             "draw-template repair must discard malformed entries and extra fields");
     require(!settings.setTemplates({{QStringLiteral("Invalid"), QByteArrayLiteral("no")}}),
             "draw-template settings must reject malformed payloads");
-    require(settings.setTemplates(
-                {{QStringLiteral("  First  "), payload}, {QStringLiteral("First"), payload}}) &&
+    const QVector<storage::DrawTemplate> drawTemplates = {
+                {QStringLiteral("  First  "), payload}, {QStringLiteral("First"), payload}};
+    require(settings.setTemplates(drawTemplates) &&
                 applicationStorage.flushNow().success,
             "draw-template settings must persist valid entries");
     static_cast<void>(initialize(executable, temporary.path()));

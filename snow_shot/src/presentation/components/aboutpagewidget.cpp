@@ -97,6 +97,22 @@ QColor blendAboutColor(const QColor& foreground, const QColor& background, qreal
                            static_cast<qreal>(background.blueF()) * (1 - amount)));
 }
 
+
+
+
+QUrl aboutProjectUrl(const QString& suffix = {}) {
+    QUrl url(QStringLiteral(SNOW_SHOT_PROJECT_URL));
+    QString path = url.path();
+    while (path.endsWith(QLatin1Char('/'))) {
+        path.chop(1);
+    }
+    url.setPath(path + suffix);
+    return url;
+}
+} // namespace
+
+// At file scope: an external-linkage class below holds fields of these
+// types; internal-linkage member types trip GCC's -Wsubobject-linkage.
 class AboutHeroSurface final : public QFrame {
   public:
     explicit AboutHeroSurface(QWidget* parent) : QFrame(parent) {}
@@ -129,7 +145,6 @@ class AboutHeroSurface final : public QFrame {
     QColor m_end;
     int m_radius = 10;
 };
-
 class AboutArtwork final : public QWidget {
   public:
     explicit AboutArtwork(QWidget* parent) : QWidget(parent) {
@@ -201,7 +216,6 @@ class AboutArtwork final : public QWidget {
     QByteArray m_source;
     QSvgRenderer m_renderer;
 };
-
 class AboutResourceButton final : public AdButton {
   public:
     AboutResourceButton(const QString& objectName, const adqt::icons::IconRef& icon,
@@ -306,17 +320,6 @@ class AboutResourceButton final : public AdButton {
     QColor m_contentColor;
     qreal m_contentDpr = 0;
 };
-
-QUrl aboutProjectUrl(const QString& suffix = {}) {
-    QUrl url(QStringLiteral(SNOW_SHOT_PROJECT_URL));
-    QString path = url.path();
-    while (path.endsWith(QLatin1Char('/'))) {
-        path.chop(1);
-    }
-    url.setPath(path + suffix);
-    return url;
-}
-} // namespace
 
 struct AboutPageWidget::Ui {
     styles::ThemeColorScheme scheme;

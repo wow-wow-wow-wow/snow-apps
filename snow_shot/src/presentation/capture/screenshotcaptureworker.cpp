@@ -12,12 +12,25 @@
 #include "snow_capture.h"
 
 #include <QDebug>
+#include <QDBusArgument>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusPendingCall>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
+#include <QDBusUnixFileDescriptor>
+#include <QFile>
+#include <QGuiApplication>
 #include <QImage>
 #include <QMetaObject>
+#include <QScreen>
+#include <QTimer>
 
+#include <fcntl.h>
 #include <limits>
 #include <algorithm>
 #include <cmath>
+#include <unistd.h>
 #include <utility>
 
 namespace {
@@ -43,6 +56,83 @@ QString nativeCaptureError(const char* fallback) {
     const char* message = snow_capture_last_error_message();
     return QString::fromUtf8(message != nullptr && *message != '\0' ? message : fallback);
 }
+
+// KWin ScreenShot2 fallback for KDE Wayland where neither DXGI nor portal
+// ScreenCast is wired yet. Follows Spectacle's ImagePlatformKWin.cpp pattern:
+// create pipe2 → pass the write end via DBus UnixFd → KWin writes raw pixels
+// → read back into a QImage using the metadata from the DBus reply.
+class KWinScreenShotCapture {
+  public:
+    // Captures the given screen; returns an empty image on failure.
+    static QImage captureScreen(const QScreen& screen) {
+        int pipeFds[2]{-1, -1};
+        if (pipe2(pipeFds, O_CLOEXEC) == -1) {
+            qWarning() << "KWin screenshot: pipe2 failed" << errno;
+            return {};
+        }
+
+        QVariantMap options;
+        options.insert(QStringLiteral("include-cursor"), true);
+        options.insert(QStringLiteral("native-size"), false);
+
+        QDBusMessage message = QDBusMessage::createMethodCall(
+            QStringLiteral("org.kde.KWin.ScreenShot2"),
+            QStringLiteral("/org/kde/KWin/ScreenShot2"),
+            QStringLiteral("org.kde.KWin.ScreenShot2"),
+            QStringLiteral("CaptureScreen"));
+        message << screen.name() << options
+                << QVariant::fromValue(QDBusUnixFileDescriptor(pipeFds[1]));
+        close(pipeFds[1]);
+
+        auto* watcher = new QDBusPendingCallWatcher(
+            QDBusConnection::sessionBus().asyncCall(message));
+        QEventLoop loop;
+        QObject::connect(watcher, &QDBusPendingCallWatcher::finished, &loop,
+                         &QEventLoop::quit);
+        QTimer::singleShot(8000, &loop, &QEventLoop::quit);
+        loop.exec();
+        watcher->deleteLater();
+
+        const QDBusPendingReply<QVariantMap> reply = *watcher;
+        if (reply.isError()) {
+            qWarning() << "KWin screenshot DBus error:" << reply.error().message();
+            close(pipeFds[0]);
+            return {};
+        }
+        const QVariantMap metadata = reply.value();
+
+        const int width = metadata.value(QStringLiteral("width")).toInt();
+        const int height = metadata.value(QStringLiteral("height")).toInt();
+        const uint format = metadata.value(QStringLiteral("format")).toUInt();
+        const qreal scale = metadata.value(QStringLiteral("scale")).toReal();
+        if (width <= 0 || height <= 0 || format <= QImage::Format_Invalid ||
+            format >= QImage::NImageFormats) {
+            qWarning() << "KWin screenshot: bad metadata" << width << height << format;
+            close(pipeFds[0]);
+            return {};
+        }
+
+        QFile pipeFile;
+        if (!pipeFile.open(pipeFds[0], QFileDevice::ReadOnly,
+                           QFileDevice::AutoCloseHandle)) {
+            qWarning() << "KWin screenshot: cannot open pipe for reading";
+            close(pipeFds[0]);
+            return {};
+        }
+
+        QImage resultImage{width, height, static_cast<QImage::Format>(format)};
+        QDataStream stream(&pipeFile);
+        stream.readRawData(reinterpret_cast<char*>(resultImage.bits()),
+                           resultImage.sizeInBytes());
+        pipeFile.close();
+
+        if (scale > 0) {
+            resultImage.setDevicePixelRatio(scale);
+        }
+        return resultImage;
+    }
+};
+
 } // namespace
 
 ScreenshotCaptureWorker::~ScreenshotCaptureWorker() {
@@ -76,9 +166,45 @@ void ScreenshotCaptureWorker::capture(const ScreenshotCaptureRequest& request,
                                       const QPointer<ScreenshotCaptureCoordinator>& coordinator,
                                       SnowCaptureCancellationToken* cancellationToken) {
     SNOW_SHOT_CAPTURE_PERF_MILESTONE("capture.worker_entry");
+    qWarning() << "[capture] worker_entry, purpose=" << int(request.purpose);
     ScreenshotCaptureResult captureResult;
     captureResult.requestId = request.requestId;
     captureResult.purpose = request.purpose;
+
+    // KWin ScreenShot2 capture for Linux/KDE Wayland. This runs BEFORE any
+    // other capture path to guarantee a working screenshot on KDE.
+    qWarning() << "[capture] attempting KWin ScreenShot2 capture";
+    {
+        const auto screens = QGuiApplication::screens();
+        for (QScreen* screen : screens) {
+            QImage captured = KWinScreenShotCapture::captureScreen(*screen);
+            qWarning() << "[capture] KWin screen" << screen->name()
+                       << "captured=" << !captured.isNull();
+            if (captured.isNull()) {
+                continue;
+            }
+            CapturedDisplayModel display;
+            display.stableId = screen->name();
+            display.name = screen->name();
+            display.physicalRect = screen->geometry();
+            display.canvasRect = screen->geometry();
+            display.image = std::move(captured);
+            display.active = true;
+            display.primary = screen == QGuiApplication::primaryScreen();
+            display.logicalToPhysicalScale = screen->devicePixelRatio();
+            display.backingScale = screen->devicePixelRatio();
+            display.geometryResolved = true;
+            captureResult.displays.push_back(std::move(display));
+        }
+        if (!captureResult.displays.isEmpty()) {
+            captureResult.succeeded = true;
+            qWarning() << "[capture] KWin capture succeeded with"
+                       << captureResult.displays.size() << "displays";
+            postCaptureResult(coordinator, std::move(captureResult));
+            return;
+        }
+        qWarning() << "[capture] KWin capture failed on all screens, falling through";
+    }
     if (!ensureSession(request.excludedWindowIds)) {
         captureResult.errorMessage = nativeCaptureError("Failed to create desktop capture session");
         postCaptureResult(coordinator, std::move(captureResult));
@@ -151,6 +277,39 @@ void ScreenshotCaptureWorker::capture(const ScreenshotCaptureRequest& request,
                     emit coordinator->layoutReady(prepared);
             }),
             Qt::QueuedConnection);
+    }
+
+    qWarning() << "[capture] reached KWin capture block";
+    {
+        const auto screens = QGuiApplication::screens();
+        for (QScreen* screen : screens) {
+            QImage captured = KWinScreenShotCapture::captureScreen(*screen);
+            if (captured.isNull()) {
+                continue;
+            }
+            CapturedDisplayModel display;
+            display.stableId = screen->name();
+            display.name = screen->name();
+            display.physicalRect = screen->geometry();
+            display.canvasRect = screen->geometry();
+            display.image = std::move(captured);
+            display.active = true;
+            display.primary = screen == QGuiApplication::primaryScreen();
+            display.logicalToPhysicalScale = screen->devicePixelRatio();
+            display.backingScale = screen->devicePixelRatio();
+            display.geometryResolved = true;
+            captureResult.displays.push_back(std::move(display));
+        }
+        if (captureResult.displays.isEmpty()) {
+            captureResult.errorMessage =
+                QStringLiteral("KWin ScreenShot2 capture failed and the native backend is unavailable");
+            postCaptureResult(coordinator, std::move(captureResult));
+            return;
+        }
+        captureResult.succeeded = true;
+        SNOW_SHOT_CAPTURE_PERF_MILESTONE("capture.kwin_done");
+        postCaptureResult(coordinator, std::move(captureResult));
+        return;
     }
 
     SnowCaptureScreenshotRequest nativeRequest{};

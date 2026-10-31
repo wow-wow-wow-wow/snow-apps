@@ -71,11 +71,13 @@ void saveCommand(const QString& cache, const QJsonObject& command,
     file.write(QJsonDocument(command).toJson(QJsonDocument::Compact));
 }
 
+#ifdef Q_OS_WIN
 QJsonObject handoff(const QString& cache, const QString& name = QStringLiteral("handoff.json")) {
     QFile file(QDir(cache).filePath(name));
     return file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()).object()
                                           : QJsonObject{};
 }
+#endif
 
 int fakeSidecar(int argc, char** argv) {
     const QString scenario = QUrl(argument(argc, argv, "--github-api-url")).path().mid(1);

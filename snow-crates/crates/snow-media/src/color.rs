@@ -49,7 +49,7 @@ pub fn blend_srgb_into_pq(destination: &mut [u8; 6], source: [u8; 4]) {
     ];
     let alpha = f32::from(source[3]) / 255.0;
     let pq = pq_table();
-    for (dst, src) in destination.chunks_exact_mut(2).zip(linear) {
+    for (dst, src) in destination.as_chunks_mut::<2>().0.iter_mut().zip(linear) {
         let background = pq[u16::from_le_bytes([dst[0], dst[1]]) as usize];
         let value = nits_to_pq(src * 203.0 * alpha + background * (1.0 - alpha));
         dst.copy_from_slice(&((value * 65535.0).round() as u16).to_le_bytes());
@@ -93,7 +93,7 @@ pub fn tone_map_rgb48_row(source: &[u8], destination: &mut [u8]) -> Result<(), &
         return Err("HDR tone-map row lengths do not match");
     }
     let table = pq_table();
-    for (src, dst) in source.chunks_exact(6).zip(destination.chunks_exact_mut(4)) {
+    for (src, dst) in source.as_chunks::<6>().0.iter().zip(destination.as_chunks_mut::<4>().0.iter_mut()) {
         let rgb = [0, 2, 4].map(|i| table[u16::from_le_bytes([src[i], src[i + 1]]) as usize]);
         dst.copy_from_slice(&map_nits(rgb));
     }
@@ -114,17 +114,17 @@ mod tests {
         blend_srgb_into_pq(&mut pixel, [255, 0, 0, 0]);
         assert_eq!(pixel, original);
         blend_srgb_into_pq(&mut pixel, [255; 4]);
-        for c in pixel.chunks_exact(2) {
+        for c in pixel.as_chunks::<2>().0.iter() {
             assert!((decode(c) - 203.0).abs() < 0.1);
         }
         pixel = original;
         blend_srgb_into_pq(&mut pixel, [255, 255, 255, 128]);
         let expected = 203.0 * (128.0 / 255.0) + 1000.0 * (127.0 / 255.0);
-        for c in pixel.chunks_exact(2) {
+        for c in pixel.as_chunks::<2>().0.iter() {
             assert!((decode(c) - expected).abs() < 0.3);
         }
         blend_srgb_into_pq(&mut pixel, [255, 0, 0, 255]);
-        for (c, expected) in pixel.chunks_exact(2).zip([0.627404, 0.069097, 0.016391]) {
+        for (c, expected) in pixel.as_chunks::<2>().0.iter().zip([0.627404, 0.069097, 0.016391]) {
             assert!((decode(c) - 203.0 * expected).abs() < 0.1);
         }
     }
@@ -154,10 +154,10 @@ mod tests {
         }
         let mut output = vec![0; bytes.len() / 6 * 4];
         tone_map_rgb48_row(&bytes, &mut output).unwrap();
-        for (src, dst) in bytes.chunks_exact(6).zip(output.chunks_exact(4)) {
+        for (src, dst) in bytes.as_chunks::<6>().0.iter().zip(output.as_chunks::<4>().0.iter()) {
             let rgb =
                 [0, 2, 4].map(|i| f32::from(u16::from_le_bytes([src[i], src[i + 1]])) / 65535.0);
-            assert_eq!(dst, tone_map_pq(rgb));
+            assert_eq!(*dst, tone_map_pq(rgb));
         }
         assert!(tone_map_rgb48_row(&[0; 7], &mut [0; 4]).is_err());
     }

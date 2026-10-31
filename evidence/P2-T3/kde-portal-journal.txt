@@ -1,0 +1,27 @@
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]: CreateSession called with parameters:
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     handle:  "/org/freedesktop/portal/desktop/request/1_132/snow_shot_token_1"
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     session_handle:  "/org/freedesktop/portal/desktop/session/1_132/snow_shot"
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     app_id:  "zcode"
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     options:  QMap(("handle_token", QVariant(QString, "snow_shot_token_1"))("session_handle_token", QVariant(QString, "snow_shot")))
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]: BindShortcuts called with parameters:
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     handle:  "/org/freedesktop/portal/desktop/request/1_132/snow_shot_token_2"
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     session_handle:  "/org/freedesktop/portal/desktop/session/1_132/snow_shot"
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     shortcuts:  QList(std::pair("snow-shot-8707", QMap(("description", QVariant(QString, "Ctrl+F3")))), std::pair("snow-shot-8706", QMap(("description", QVariant(QString, "F3")))), std::pair("snow-shot-8705", QMap(("description", QVariant(QString, "Ctrl+F1")))), std::pair("snow-shot-8704", QMap(("description", QVariant(QString, "F1")))))
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     parent_window:  ""
+10月 31 13:03:11 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     options:  QMap(("handle_token", QVariant(QString, "snow_shot_token_2")))
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]: CreateSession called with parameters:
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     handle:  "/org/freedesktop/portal/desktop/request/1_144/snow_shot_token_1"
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     session_handle:  "/org/freedesktop/portal/desktop/session/1_144/snow_shot"
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     app_id:  "zcode"
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     options:  QMap(("handle_token", QVariant(QString, "snow_shot_token_1"))("session_handle_token", QVariant(QString, "snow_shot")))
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]: BindShortcuts called with parameters:
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     handle:  "/org/freedesktop/portal/desktop/request/1_144/snow_shot_token_2"
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     session_handle:  "/org/freedesktop/portal/desktop/session/1_144/snow_shot"
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     shortcuts:  QList(std::pair("snow-shot-8704", QMap(("description", QVariant(QString, "F1")))), std::pair("snow-shot-8705", QMap(("description", QVariant(QString, "Ctrl+F1")))), std::pair("snow-shot-8706", QMap(("description", QVariant(QString, "F3")))), std::pair("snow-shot-8707", QMap(("description", QVariant(QString, "Ctrl+F3")))))
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     parent_window:  ""
+10月 31 13:08:41 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     options:  QMap(("handle_token", QVariant(QString, "snow_shot_token_2")))
+10月 31 13:11:03 cachyos-xiaoxin xdg-desktop-portal-kde[2145]: CreateSession called with parameters:
+10月 31 13:11:03 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     handle:  "/org/freedesktop/portal/desktop/request/1_152/gdbus_probe"
+10月 31 13:11:03 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     session_handle:  "/org/freedesktop/portal/desktop/session/1_152/gdbus_probe"
+10月 31 13:11:03 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     app_id:  "zcode"
+10月 31 13:11:03 cachyos-xiaoxin xdg-desktop-portal-kde[2145]:     options:  QMap(("handle_token", QVariant(QString, "gdbus_probe"))("session_handle_token", QVariant(QString, "gdbus_probe")))

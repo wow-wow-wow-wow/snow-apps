@@ -6592,7 +6592,9 @@ void ScreenshotController::pinDroppedContent(ScreenshotClipboardContentSnapshot 
 }
 
 void ScreenshotController::startCapture() {
-    static_cast<void>(m_impl->beginCapture());
+    qWarning() << "[capture-ctrl] startCapture called";
+    bool ok = m_impl->beginCapture();
+    qWarning() << "[capture-ctrl] beginCapture returned" << ok;
 }
 
 void ScreenshotController::startDelayedCapture(int delaySeconds) {

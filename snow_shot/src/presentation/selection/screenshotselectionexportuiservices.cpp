@@ -582,13 +582,13 @@ bool presentPinnedWindowAndSynchronize(
         }
         return false;
     }
-    SNOW_SHOT_PIN_PERF_COUNTER("window.visible", window->isVisible() ? 1 : 0);
+    // `cond ? 1 : 0` trips GCC 16's -Wduplicated-branches when the inert
+    // instrumentation macro discards the value; bool->qint64 is identical.
+    SNOW_SHOT_PIN_PERF_COUNTER("window.visible", qint64(window->isVisible()));
     SNOW_SHOT_PIN_PERF_COUNTER(
         "window.geometry_valid",
-        window->currentNativeGeometry() ==
-                snow_shot::presentation::pinnedOuterRect(config.nativeGeometry)
-            ? 1
-            : 0);
+        qint64(window->currentNativeGeometry() ==
+               snow_shot::presentation::pinnedOuterRect(config.nativeGeometry)));
     SNOW_SHOT_PIN_PERF_MILESTONE("window.present_returned");
     return true;
 }

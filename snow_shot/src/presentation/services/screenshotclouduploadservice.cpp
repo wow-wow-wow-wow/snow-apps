@@ -19,6 +19,12 @@
 #include <algorithm>
 #include <utility>
 
+struct Payload {
+    QTemporaryDir directory;
+    QString path;
+    std::atomic_bool cancelled = false;
+};
+
 namespace {
 QNetworkAccessManager* sharedNetworkAccessManager() {
     auto* application = QCoreApplication::instance();
@@ -35,11 +41,6 @@ QNetworkAccessManager* sharedNetworkAccessManager() {
     return manager;
 }
 
-struct Payload {
-    QTemporaryDir directory;
-    QString path;
-    std::atomic_bool cancelled = false;
-};
 class UploadFile final : public QFile {
   public:
     explicit UploadFile(std::shared_ptr<Payload> payload)
@@ -71,6 +72,9 @@ QByteArray contentType(ScreenshotImageFileFormat format) {
     return "application/octet-stream";
 }
 } // namespace
+
+// At file scope: an external-linkage class below holds fields of these
+// types; internal-linkage member types trip GCC's -Wsubobject-linkage.
 struct ScreenshotCloudUploadJob::Impl {
     snow_shot::runtime::RuntimeActivityLease activity =
         snow_shot::runtime::RuntimeActivityTracker::shared().acquire();

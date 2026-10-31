@@ -1653,7 +1653,9 @@ fn copy_bgra_with_options(src: &[u8], dst: &mut [u8], pixel_count: usize, force_
     dst[..byte_count].copy_from_slice(&src[..byte_count]);
     if force_opaque {
         for alpha in dst[..byte_count]
-            .chunks_exact_mut(4)
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
             .map(|pixel| &mut pixel[3])
         {
             *alpha = 255;
@@ -1662,7 +1664,7 @@ fn copy_bgra_with_options(src: &[u8], dst: &mut [u8], pixel_count: usize, force_
 }
 
 fn swap_rgba_to_bgra_in_place(bytes: &mut [u8], pixel_count: usize) {
-    for pixel in bytes[..pixel_count * 4].chunks_exact_mut(4) {
+    for pixel in bytes[..pixel_count * 4].as_chunks_mut::<4>().0 {
         pixel.swap(0, 2);
     }
 }

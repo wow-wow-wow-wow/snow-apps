@@ -25,8 +25,9 @@ function(snow_configure_avx2_sources)
     if(_snow_avx2_options)
         set_property(SOURCE ${ARGN} APPEND PROPERTY COMPILE_OPTIONS ${_snow_avx2_options})
         set_source_files_properties(${ARGN} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
-        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            # Clang cannot load a baseline-CPU PCH in an AVX2 translation unit.
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            # Clang and GCC cannot load a baseline-CPU PCH in an AVX2
+            # translation unit (GCC reports -Werror=invalid-pch).
             set_source_files_properties(${ARGN} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
         endif()
     endif()

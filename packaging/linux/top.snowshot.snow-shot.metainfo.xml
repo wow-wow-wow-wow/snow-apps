@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>top.snowshot.snow-shot</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Snow Shot</name>
+  <summary>Screenshot utility for capturing, annotating, pinning, and recognizing screen content</summary>
+  <description>
+    <p>
+      Snow Shot is a screenshot utility for capturing, annotating, pinning, and
+      recognizing screen content. It offers region and fullscreen capture,
+      annotation tools, pinned snapshots, OCR, and screen recording.
+    </p>
+    <p>
+      This Linux build targets KDE Plasma on native Wayland (with an X11
+      fallback). Screen capture and global hotkeys are delivered through
+      xdg-desktop-portal where the platform supports them.
+    </p>
+  </description>
+  <launchable type="desktop-id">snow_shot.desktop</launchable>
+  <url type="homepage">https://snowshot.top</url>
+  <url type="bugtracker">https://github.com/mg-chao/snow-apps/issues</url>
+  <developer_name>mg-chao</developer_name>
+  <provides>
+    <binary>snow_shot</binary>
+  </provides>
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>
